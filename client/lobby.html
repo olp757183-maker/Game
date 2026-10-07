@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lobby — Classic Games</title>
+  <link rel="stylesheet" href="./css/main.css">
+  <link rel="stylesheet" href="./css/lobby.css">
+  <link rel="stylesheet" href="./css/responsive.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-container">
+      <a href="./index.html" class="brand-logo">
+        <span class="brand-icon">🎮</span>
+        <span data-i18n="brandTitle">Classic Games</span>
+      </a>
+
+      <nav class="nav-links">
+        <a href="./index.html" class="nav-link" data-i18n="navHome">الرئيسية</a>
+        <a href="./lobby.html" class="nav-link active" data-i18n="navLobby">صالة الألعاب</a>
+        <a href="./profile.html" class="nav-link" data-i18n="navProfile">الملف الشخصي</a>
+        <a href="./settings.html" class="nav-link" data-i18n="navSettings">الإعدادات</a>
+      </nav>
+
+      <div class="header-actions">
+        <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme">☀️</button>
+        <button id="sound-toggle-btn" class="icon-btn" title="Toggle Sound">🔊</button>
+        <button id="lang-toggle-btn" class="btn btn-sm btn-outline">English</button>
+        <div id="header-user-actions" style="display: flex; gap: 0.5rem;"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="lobby-container">
+    <!-- Top Games Shelf -->
+    <section class="lobby-games-banner">
+      <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 0.5rem;" data-i18n="selectGameLabel">اختر اللعبة</h2>
+      <div class="games-shelf">
+        <div class="game-shelf-card" data-game="uno">
+          <div class="game-card-icon">🎴</div>
+          <h3 class="game-card-title">UNO</h3>
+          <p class="game-card-players">2-8 Players</p>
+        </div>
+
+        <div class="game-shelf-card" data-game="baloot">
+          <div class="game-card-icon">🃏</div>
+          <h3 class="game-card-title">بلوت (Baloot)</h3>
+          <p class="game-card-players">4 Players (2 Teams)</p>
+        </div>
+
+        <div class="game-shelf-card" data-game="chess">
+          <div class="game-card-icon">♟️</div>
+          <h3 class="game-card-title">شطرنج (Chess)</h3>
+          <p class="game-card-players">2 Players</p>
+        </div>
+
+        <div class="game-shelf-card" data-game="domino">
+          <div class="game-card-icon">🁢</div>
+          <h3 class="game-card-title">دومينو (Domino)</h3>
+          <p class="game-card-players">2-4 Players</p>
+        </div>
+
+        <div class="game-shelf-card" data-game="cards">
+          <div class="game-card-icon">♠️</div>
+          <h3 class="game-card-title">بطّة / شدّة (Cards)</h3>
+          <p class="game-card-players">2-6 Players</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Lobby Header & Actions -->
+    <div class="lobby-header-bar">
+      <div class="lobby-title-area">
+        <h2 data-i18n="openRooms">الغرف المفتوحة</h2>
+      </div>
+
+      <div class="lobby-buttons-group">
+        <button id="open-create-room-btn" class="btn btn-primary" data-i18n="createRoom">
+          ➕ إنشاء غرفة
+        </button>
+        <button id="open-join-room-btn" class="btn btn-outline" data-i18n="joinRoom">
+          🔑 دخول برمز
+        </button>
+      </div>
+    </div>
+
+    <!-- Filters & Search -->
+    <div class="lobby-filters-bar">
+      <div class="search-input-wrap">
+        <input type="text" id="room-search-input" class="form-control" placeholder="ابحث برمز الغرفة أو اسم المضيف..." data-i18n-placeholder="searchPlaceholder">
+      </div>
+
+      <div class="filter-pills-wrap">
+        <button class="filter-pill active" data-filter="all" data-i18n="filterAll">الكل</button>
+        <button class="filter-pill" data-filter="uno">UNO</button>
+        <button class="filter-pill" data-filter="baloot">بلوت</button>
+        <button class="filter-pill" data-filter="chess">شطرنج</button>
+        <button class="filter-pill" data-filter="domino">دومينو</button>
+        <button class="filter-pill" data-filter="cards">شدّة</button>
+      </div>
+    </div>
+
+    <!-- Rooms Table -->
+    <div class="rooms-table-container">
+      <table class="rooms-table">
+        <thead>
+          <tr>
+            <th data-i18n="roomCodeCol">رمز الغرفة</th>
+            <th data-i18n="gameCol">اللعبة</th>
+            <th data-i18n="hostCol">المضيف</th>
+            <th data-i18n="playersCol">اللاعبون</th>
+            <th data-i18n="statusCol">الحالة</th>
+            <th data-i18n="actionCol">الإجراء</th>
+          </tr>
+        </thead>
+        <tbody id="rooms-table-body">
+          <tr>
+            <td colspan="6" class="empty-rooms-state" data-i18n="noRoomsFound">
+              لا توجد غرف عامة حاليًا. كن أول من ينشئ غرفة!
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Create Room Modal -->
+  <div id="create-room-modal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" data-i18n="createRoomModalTitle">إنشاء غرفة ألعاب جديدة</h3>
+        <button type="button" class="modal-close-btn">&times;</button>
+      </div>
+
+      <form id="create-room-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" data-i18n="selectGameLabel">اختر اللعبة:</label>
+            <select id="create-room-game" class="form-control">
+              <option value="uno">UNO (أونو)</option>
+              <option value="baloot">Baloot (بلوت)</option>
+              <option value="chess">Chess (شطرنج)</option>
+              <option value="domino">Domino (دومينو)</option>
+              <option value="cards">Cards (بطّة / شدّة)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" data-i18n="roomTypeLabel">نوع الغرفة:</label>
+            <select id="create-room-privacy" class="form-control">
+              <option value="public" data-i18n="publicRoom">عامة (تظهر في القائمة)</option>
+              <option value="private" data-i18n="privateRoom">خاصة (بالرمز فقط)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" data-i18n="maxPlayersLabel">الحد الأقصى للاعبين:</label>
+            <div class="player-count-grid" id="player-count-buttons-grid">
+              <button type="button" class="player-count-btn" data-count="2">2 لاعبين</button>
+              <button type="button" class="player-count-btn" data-count="3">3 لاعبين</button>
+              <button type="button" class="player-count-btn active" data-count="4">4 لاعبين</button>
+              <button type="button" class="player-count-btn" data-count="6">6 لاعبين</button>
+              <button type="button" class="player-count-btn" data-count="8">8 لاعبين</button>
+            </div>
+            <input type="hidden" id="create-room-max-players" value="4">
+          </div>
+
+          <!-- Dynamic Game Rules Editor -->
+          <div style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+            <h4 style="font-size: 0.95rem; font-weight: 800; margin-bottom: 0.75rem; color: var(--accent);">
+              ⚙️ إعدادات وقوانين اللعبة (Rules Editor)
+            </h4>
+            <div id="game-specific-rules-container"></div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline modal-close-btn">إلغاء</button>
+          <button type="submit" class="btn btn-primary" data-i18n="createRoom">إنشاء الغرفة</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Join Room by Code Modal -->
+  <div id="join-room-modal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" data-i18n="joinModalTitle">الانضمام إلى غرفة</h3>
+        <button type="button" class="modal-close-btn">&times;</button>
+      </div>
+
+      <form id="join-room-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" data-i18n="enterRoomCodePrompt">أدخل رمز الغرفة المكون من 6 أحرف:</label>
+            <input type="text" id="join-room-code-input" class="form-control" required maxlength="8" placeholder="مثال: ABC123" style="text-transform: uppercase; font-family: monospace; font-size: 1.2rem; text-align: center; letter-spacing: 2px;">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline modal-close-btn">إلغاء</button>
+          <button type="submit" class="btn btn-primary" data-i18n="joinBtn">انضمام</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <p>© 2026 Classic Games Online</p>
+  </footer>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="./js/lobby.js"></script>
+</body>
+</html>

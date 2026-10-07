@@ -1,0 +1,150 @@
+/**
+ * Arabic Language Translations (العربية)
+ */
+export const ar = {
+  // Navigation & Brand
+  brandTitle: "Classic Games",
+  brandSubtitle: "العب مع الأصدقاء أونلاين",
+  navHome: "الرئيسية",
+  navLobby: "صالة الألعاب",
+  navProfile: "الملف الشخصي",
+  navSettings: "الإعدادات",
+  navLogin: "تسجيل الدخول",
+  navRegister: "إنشاء حساب",
+  navLogout: "تسجيل الخروج",
+
+  // Home Page
+  heroTitle: "ألعاب كلاسيكية — العب مع أصدقائك",
+  heroSubtitle: "منصة جماعية في الوقت الفعلي لألعاب أونو، بلوت، شطرنج، دومينو، والورق مباشرة من متصفحك.",
+  playNow: "العب الآن",
+  createRoom: "إنشاء غرفة",
+  joinRoom: "الانضمام لغرفة",
+  featuredGames: "الألعاب المتاحة",
+  howItWorks: "كيف تبدأ اللعب؟",
+  step1Title: "1. اختر اللعبة",
+  step1Desc: "اختر أونو، بلوت، شطرنج، دومينو أو لعبة الشدّة.",
+  step2Title: "2. أنشئ غرفة",
+  step2Desc: "خصص القوانين ووقت الدور ومستوى الخصوصية.",
+  step3Title: "3. شارك الكود",
+  step3Desc: "أرسل كود الغرفة المكون من 6 خانات لأصدقائك.",
+  step4Title: "4. العب واستمتع",
+  step4Desc: "تنافس في الوقت الفعلي مع محادثة مباشرة وأوراق سرية.",
+
+  // Auth
+  loginTitle: "تسجيل الدخول إلى حسابك",
+  registerTitle: "إنشاء حساب جديد",
+  guestLogin: "الدخول كضيف",
+  guestNote: "ابدأ اللعب فورًا بدون الحاجة لبريد إلكتروني",
+  usernameLabel: "اسم المستخدم",
+  emailLabel: "البريد الإلكتروني",
+  passwordLabel: "كلمة المرور",
+  confirmPasswordLabel: "تأكيد كلمة المرور",
+  rememberMe: "تذكرني",
+  dontHaveAccount: "ليس لديك حساب؟",
+  alreadyHaveAccount: "لديك حساب بالفعل؟",
+  signUpLink: "أنشئ حسابك هنا",
+  signInLink: "سجل الدخول هنا",
+  loginSuccess: "تم تسجيل الدخول بنجاح!",
+  registerSuccess: "تم إنشاء الحساب بنجاح!",
+
+  // Lobby
+  openRooms: "الغرف المفتوحة",
+  filterAll: "جميع الألعاب",
+  searchPlaceholder: "ابحث برمز الغرفة أو اسم المضيف...",
+  noRoomsFound: "لا توجد غرف عامة حاليًا. كن أول من ينشئ غرفة!",
+  roomCodeCol: "رمز الغرفة",
+  gameCol: "اللعبة",
+  hostCol: "المضيف",
+  playersCol: "اللاعبون",
+  statusCol: "الحالة",
+  actionCol: "الإجراء",
+  joinBtn: "انضمام",
+  createRoomModalTitle: "إنشاء غرفة ألعاب جديدة",
+  selectGameLabel: "اختر اللعبة",
+  roomTypeLabel: "نوع الغرفة",
+  publicRoom: "عامة (تظهر في القائمة)",
+  privateRoom: "خاصة (بالرمز فقط)",
+  maxPlayersLabel: "الحد الأقصى للاعبين",
+  enterRoomCodePrompt: "أدخل رمز الغرفة المكون من 6 أحرف:",
+  joinModalTitle: "الانضمام إلى غرفة",
+
+  // Game Room
+  roomTitle: "الغرفة",
+  waitingForPlayers: "في انتظار انضمام اللاعبين...",
+  startGameBtn: "بدء اللعبة",
+  restartGameBtn: "إعادة بدء اللعبة",
+  leaveRoomBtn: "مغادرة الغرفة",
+  settingsBtn: "إعدادات الغرفة",
+  copyCode: "نسخ الكود",
+  codeCopied: "تم نسخ رمز الغرفة إلى الحافظة!",
+  chatTab: "المحادثة",
+  playersTab: "اللاعبون",
+  sendMsgPlaceholder: "اكتب رسالة...",
+  sendBtn: "إرسال",
+  hostBadge: "مضيف",
+  turnIndicator: "دور اللاعب: ",
+  yourTurn: "دورك الآن!",
+  waitingTurn: "في انتظار الخصم...",
+  gameOverTitle: "انتهت المباراة",
+  winnerAnnouncement: "الفائز:",
+  roundOverTitle: "انتهت الجولة",
+  nextRoundBtn: "الجولة التالية",
+
+  // UNO Specific
+  unoCallBtn: "أونو! (UNO)",
+  unoDrawBtn: "سحب بطاقة",
+  unoPassBtn: "تمرير الدور",
+  unoSelectColor: "اختر لون البطاقة الخاصة",
+  unoPenaltyMessage: "تم تطبيق عقوبة السحب!",
+
+  // Chess Specific
+  chessCheck: "كش ملك!",
+  chessCheckmate: "كش مات! انتصار ساحق!",
+  chessStalemate: "تعادل خنقي!",
+  chessResignBtn: "استسلام",
+  chessDrawOfferBtn: "طلب تعادل",
+  chessWhite: "الأبيض",
+  chessBlack: "الأسود",
+
+  // Domino Specific
+  dominoDrawBtn: "سحب حجر",
+  dominoPassBtn: "تمرير الدور",
+  dominoPickSide: "اختر جهة اللعب",
+  dominoLeft: "الجهة اليسرى",
+  dominoRight: "الجهة اليمنى",
+
+  // Baloot Specific
+  balootSun: "صن",
+  balootHokom: "حكم",
+  balootPass: "بس",
+  balootAshkal: "أشكال",
+  balootTeam1: "فريق لنا (شمال / جنوب)",
+  balootTeam2: "فريق لهم (شرق / غرب)",
+  balootRound: "الجولة",
+  balootContract: "نوع اللعب",
+
+  // Cards / Batta
+  cardsDrawBtn: "سحب ورقة",
+  cardsPassBtn: "تمرير",
+  cardsSelectSuit: "اختر النوع الجديد",
+
+  // Rules Editor
+  rulesGeneralTab: "عام",
+  rulesGameplayTab: "قوانين اللعب",
+  rulesTimerTab: "المؤقت",
+  startingCardsRule: "عدد أوراق البداية",
+  stackingRule: "تراكم السحب (+2 / +4)",
+  jumpInRule: "الدخول السريع (Jump-In)",
+  sevenZeroRule: "قانون 7-0 (تبديل الأوراق)",
+  drawUntilPlayableRule: "السحب حتى إيجاد ورقة",
+  targetScoreRule: "نقاط الفوز بالمباراة",
+  turnTimerRule: "مؤقت الدور",
+  secondsLabel: "ثانية",
+  timerOff: "بدون مؤقت",
+
+  // General Status & Alerts
+  connectionLost: "انقطع الاتصال... جارٍ إعادة المحاولة.",
+  reconnected: "تمت استعادة الاتصال بالسيرفر!",
+  errorTitle: "تنبيه",
+  successTitle: "نجاح"
+};

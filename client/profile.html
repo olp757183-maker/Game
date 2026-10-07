@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile — Classic Games</title>
+  <link rel="stylesheet" href="./css/main.css">
+  <link rel="stylesheet" href="./css/responsive.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-container">
+      <a href="./index.html" class="brand-logo">
+        <span class="brand-icon">🎮</span>
+        <span data-i18n="brandTitle">Classic Games</span>
+      </a>
+
+      <nav class="nav-links">
+        <a href="./index.html" class="nav-link" data-i18n="navHome">الرئيسية</a>
+        <a href="./lobby.html" class="nav-link" data-i18n="navLobby">صالة الألعاب</a>
+        <a href="./profile.html" class="nav-link active" data-i18n="navProfile">الملف الشخصي</a>
+        <a href="./settings.html" class="nav-link" data-i18n="navSettings">الإعدادات</a>
+      </nav>
+
+      <div class="header-actions">
+        <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme">☀️</button>
+        <button id="sound-toggle-btn" class="icon-btn" title="Toggle Sound">🔊</button>
+        <button id="lang-toggle-btn" class="btn btn-sm btn-outline">English</button>
+        <div id="header-user-actions" style="display: flex; gap: 0.5rem;"></div>
+      </div>
+    </div>
+  </header>
+
+  <main style="max-width: 900px; margin: 3rem auto; padding: 0 1.5rem; flex: 1;">
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; box-shadow: var(--shadow-md);">
+      <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
+        <div id="profile-avatar-display" class="avatar-badge avatar1" style="width: 72px; height: 72px; font-size: 2rem;"></div>
+        <div>
+          <h2 id="profile-username-display" style="font-size: 1.6rem; font-weight: 800;">Player</h2>
+          <p id="profile-email-display" style="color: var(--text-muted); font-size: 0.95rem;">player@example.com</p>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <h3 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 1rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+        📊 إحصائيات المباريات
+      </h3>
+
+      <div id="profile-stats-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <div style="background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem; text-align: center;">
+          <span style="font-size: 0.85rem; color: var(--text-muted);">UNO</span>
+          <div style="font-size: 1.4rem; font-weight: 800; color: var(--accent);">0 Wins</div>
+        </div>
+        <div style="background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem; text-align: center;">
+          <span style="font-size: 0.85rem; color: var(--text-muted);">بلوت</span>
+          <div style="font-size: 1.4rem; font-weight: 800; color: var(--accent);">0 Wins</div>
+        </div>
+        <div style="background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem; text-align: center;">
+          <span style="font-size: 0.85rem; color: var(--text-muted);">شطرنج</span>
+          <div style="font-size: 1.4rem; font-weight: 800; color: var(--accent);">0 Wins</div>
+        </div>
+        <div style="background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem; text-align: center;">
+          <span style="font-size: 0.85rem; color: var(--text-muted);">دومينو</span>
+          <div style="font-size: 1.4rem; font-weight: 800; color: var(--accent);">0 Wins</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>© 2026 Classic Games Online</p>
+  </footer>
+
+  <script type="module">
+    import api from './js/api.js';
+    import ui from './js/ui.js';
+    document.addEventListener('DOMContentLoaded', async () => {
+      ui.setupGlobalNav();
+      const user = api.getUser();
+      if (!user) {
+        window.location.href = '/login.html';
+        return;
+      }
+      try {
+        const fullProfile = await api.getMe();
+        document.getElementById('profile-username-display').textContent = fullProfile.username;
+        document.getElementById('profile-email-display').textContent = fullProfile.email || (fullProfile.isGuest ? 'Guest Account' : '');
+        const avatarEl = document.getElementById('profile-avatar-display');
+        avatarEl.className = `avatar-badge ${fullProfile.avatar || 'avatar1'}`;
+
+        const statsCont = document.getElementById('profile-stats-container');
+        if (fullProfile.stats && fullProfile.stats.length > 0) {
+          statsCont.innerHTML = fullProfile.stats.map(s => `
+            <div style="background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.2rem; text-align: center;">
+              <div style="font-size: 0.9rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">${s.game}</div>
+              <div style="font-size: 1.5rem; font-weight: 900; color: var(--accent); margin: 0.25rem 0;">${s.wins} Wins</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">${s.matchesPlayed} Matches (${s.losses} Losses)</div>
+            </div>
+          `).join('');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  </script>
+</body>
+</html>

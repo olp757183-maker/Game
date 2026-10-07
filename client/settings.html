@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — Classic Games</title>
+  <link rel="stylesheet" href="./css/main.css">
+  <link rel="stylesheet" href="./css/responsive.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-container">
+      <a href="./index.html" class="brand-logo">
+        <span class="brand-icon">🎮</span>
+        <span data-i18n="brandTitle">Classic Games</span>
+      </a>
+
+      <nav class="nav-links">
+        <a href="./index.html" class="nav-link" data-i18n="navHome">الرئيسية</a>
+        <a href="./lobby.html" class="nav-link" data-i18n="navLobby">صالة الألعاب</a>
+        <a href="./profile.html" class="nav-link" data-i18n="navProfile">الملف الشخصي</a>
+        <a href="./settings.html" class="nav-link active" data-i18n="navSettings">الإعدادات</a>
+      </nav>
+
+      <div class="header-actions">
+        <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme">☀️</button>
+        <button id="sound-toggle-btn" class="icon-btn" title="Toggle Sound">🔊</button>
+        <button id="lang-toggle-btn" class="btn btn-sm btn-outline">English</button>
+        <div id="header-user-actions" style="display: flex; gap: 0.5rem;"></div>
+      </div>
+    </div>
+  </header>
+
+  <main style="max-width: 700px; margin: 3rem auto; padding: 0 1.5rem; flex: 1;">
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2.25rem; box-shadow: var(--shadow-md);">
+      <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 2rem;">⚙️ إعدادات الموقع</h2>
+
+      <!-- Language Setting -->
+      <div class="form-group" style="margin-bottom: 2rem;">
+        <label class="form-label">اللغة (Language):</label>
+        <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+          <button id="lang-ar-btn" class="btn btn-outline" style="flex: 1;">العربية (RTL)</button>
+          <button id="lang-en-btn" class="btn btn-outline" style="flex: 1;">English (LTR)</button>
+        </div>
+      </div>
+
+      <!-- Theme Setting -->
+      <div class="form-group" style="margin-bottom: 2rem;">
+        <label class="form-label">المظهر (Theme):</label>
+        <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+          <button id="theme-dark-btn" class="btn btn-outline" style="flex: 1;">🌙 الوضع الداكن (Dark)</button>
+          <button id="theme-light-btn" class="btn btn-outline" style="flex: 1;">☀️ الوضع الفاتح (Light)</button>
+        </div>
+      </div>
+
+      <!-- Sound FX Setting -->
+      <div class="form-group" style="margin-bottom: 2rem;">
+        <label class="form-label">المؤثرات الصوتية (Sound Effects):</label>
+        <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+          <button id="sound-on-btn" class="btn btn-outline" style="flex: 1;">🔊 تفعيل الصوت</button>
+          <button id="sound-off-btn" class="btn btn-outline" style="flex: 1;">🔇 كتم الصوت</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>© 2026 Classic Games Online</p>
+  </footer>
+
+  <script type="module">
+    import ui from './js/ui.js';
+    import i18n from './js/language.js';
+    import { sfx, showToast } from './js/utils.js';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      ui.setupGlobalNav();
+
+      // Language Buttons
+      document.getElementById('lang-ar-btn')?.addEventListener('click', () => {
+        i18n.setLanguage('ar');
+        showToast('تم تغيير اللغة إلى العربية', 'info');
+      });
+      document.getElementById('lang-en-btn')?.addEventListener('click', () => {
+        i18n.setLanguage('en');
+        showToast('Language changed to English', 'info');
+      });
+
+      // Theme Buttons
+      document.getElementById('theme-dark-btn')?.addEventListener('click', () => {
+        ui.setTheme('dark');
+        showToast('Dark theme activated', 'info');
+      });
+      document.getElementById('theme-light-btn')?.addEventListener('click', () => {
+        ui.setTheme('light');
+        showToast('Light theme activated', 'info');
+      });
+
+      // Sound Buttons
+      document.getElementById('sound-on-btn')?.addEventListener('click', () => {
+        sfx.toggleSound(true);
+        sfx.click();
+        showToast('Sound enabled', 'info');
+      });
+      document.getElementById('sound-off-btn')?.addEventListener('click', () => {
+        sfx.toggleSound(false);
+        showToast('Sound muted', 'info');
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+/* ==========================================================================
+   Classic Games - Responsive CSS
+   Breakpoints: 1440px, 1024px, 768px, 480px, 360px
+   ========================================================================== */
+
+/* Tablet & Smaller Laptops (<= 1024px) */
+@media (max-width: 1024px) {
+  .room-main-content {
+    grid-template-columns: 1fr 280px;
+  }
+
+  .chess-board {
+    width: min(440px, 86vw);
+    height: min(440px, 86vw);
+  }
+
+  .chess-player-strip,
+  .chess-actions-bar {
+    width: min(440px, 86vw);
+  }
+}
+
+/* Tablet (<= 768px) */
+@media (max-width: 768px) {
+  .site-header {
+    height: auto;
+    padding: 0.75rem 0;
+  }
+
+  .header-container {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .nav-links {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    overflow-x: auto;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-light);
+  }
+
+  /* Room Page Mobile Layout: Stack board & sidebar */
+  .room-page-layout {
+    height: auto;
+    min-height: calc(100vh - 70px);
+  }
+
+  .room-main-content {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .room-game-stage {
+    min-height: 520px;
+  }
+
+  .room-sidebar {
+    height: 380px;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+
+  [dir="rtl"] .room-sidebar {
+    border-right: none;
+    border-top: 1px solid var(--border);
+  }
+
+  .uno-card {
+    width: 65px;
+    height: 98px;
+  }
+
+  .uno-logo-text {
+    font-size: 0.9rem;
+  }
+
+  .card-center {
+    font-size: 1.5rem;
+  }
+
+  .standard-card {
+    width: 65px;
+    height: 96px;
+  }
+
+  .card-center-suit {
+    font-size: 1.8rem;
+  }
+
+  .domino-tile.hand-tile {
+    width: 44px;
+    height: 88px;
+  }
+
+  .domino-tile.board-tile {
+    width: 40px;
+    height: 80px;
+  }
+
+  .pips-grid {
+    width: 26px;
+    height: 26px;
+  }
+
+  .pip {
+    width: 5px;
+    height: 5px;
+  }
+
+  .games-shelf {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .lobby-header-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lobby-buttons-group {
+    justify-content: stretch;
+  }
+
+  .lobby-buttons-group .btn {
+    flex: 1;
+  }
+}
+
+/* Mobile Devices (<= 480px) */
+@media (max-width: 480px) {
+  .brand-logo {
+    font-size: 1.15rem;
+  }
+
+  .btn {
+    padding: 0.55rem 0.9rem;
+    font-size: 0.88rem;
+  }
+
+  .hero-title {
+    font-size: 1.75rem !important;
+  }
+
+  .games-shelf {
+    grid-template-columns: 1fr;
+  }
+
+  .uno-card {
+    width: 54px;
+    height: 82px;
+  }
+
+  .standard-card {
+    width: 54px;
+    height: 80px;
+  }
+
+  .chess-board {
+    width: 92vw;
+    height: 92vw;
+  }
+
+  .chess-player-strip,
+  .chess-actions-bar {
+    width: 92vw;
+  }
+
+  .rooms-table th,
+  .rooms-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .room-header {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .room-actions-group .btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .action-buttons-group {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+/* Smallest Mobile (<= 360px) */
+@media (max-width: 360px) {
+  .uno-card {
+    width: 48px;
+    height: 72px;
+  }
+
+  .standard-card {
+    width: 48px;
+    height: 72px;
+  }
+
+  .card-center {
+    font-size: 1.2rem;
+  }
+
+  .my-hand-scroll {
+    gap: 0.25rem;
+    padding: 0.25rem;
+  }
+}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Classic Games</title>
+  <link rel="stylesheet" href="./css/main.css">
+  <link rel="stylesheet" href="./css/auth.css">
+  <link rel="stylesheet" href="./css/responsive.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-container">
+      <a href="./index.html" class="brand-logo">
+        <span class="brand-icon">🎮</span>
+        <span data-i18n="brandTitle">Classic Games</span>
+      </a>
+
+      <div class="header-actions">
+        <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme">☀️</button>
+        <button id="lang-toggle-btn" class="btn btn-sm btn-outline">English</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1 data-i18n="loginTitle">تسجيل الدخول إلى حسابك</h1>
+        <p class="auth-subtitle" data-i18n="heroSubtitle">العب مع أصدقائك في الوقت الحقيقي</p>
+      </div>
+
+      <!-- Guest Card -->
+      <div class="guest-card">
+        <p data-i18n="guestNote">ابدأ اللعب فورًا بدون الحاجة لبريد إلكتروني</p>
+        <button id="guest-login-btn" type="button" class="btn btn-primary" style="width: 100%;" data-i18n="guestLogin">
+          ⚡ الدخول كضيف
+        </button>
+      </div>
+
+      <div class="auth-divider">
+        <span>أو تسجيل الدخول بالحساب</span>
+      </div>
+
+      <form id="login-form" class="auth-form">
+        <div class="form-group">
+          <label class="form-label" for="identifier" data-i18n="usernameLabel">اسم المستخدم أو البريد:</label>
+          <input type="text" id="identifier" class="form-control" required placeholder="User or email@example.com">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password" data-i18n="passwordLabel">كلمة المرور:</label>
+          <input type="password" id="password" class="form-control" required placeholder="••••••••">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" data-i18n="navLogin">
+          تسجيل الدخول
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        <span data-i18n="dontHaveAccount">ليس لديك حساب؟</span>
+        <a href="./register.html" data-i18n="signUpLink">أنشئ حسابك هنا</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>© 2026 Classic Games Online</p>
+  </footer>
+
+  <script type="module" src="./js/auth.js"></script>
+</body>
+</html>

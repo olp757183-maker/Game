@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Room — Classic Games</title>
+  <link rel="stylesheet" href="./css/main.css">
+  <link rel="stylesheet" href="./css/room.css">
+  <link rel="stylesheet" href="./css/games.css">
+  <link rel="stylesheet" href="./css/responsive.css">
+</head>
+<body>
+  <!-- Room Top Header -->
+  <header class="room-header">
+    <div class="room-meta-group">
+      <a href="./lobby.html" class="brand-logo" style="font-size: 1.1rem;">
+        <span class="brand-icon">🎮</span>
+      </a>
+
+      <div id="copy-room-code-btn" class="room-code-badge" title="Click to copy room code">
+        <span>🔑</span>
+        <span id="room-code-display">------</span>
+        <span style="font-size: 0.8rem; opacity: 0.7;">📋</span>
+      </div>
+
+      <div class="room-game-title" id="room-game-title">Loading...</div>
+      <span id="room-host-badge" class="badge badge-info" style="display: none;" data-i18n="hostBadge">Host</span>
+    </div>
+
+    <div class="room-actions-group">
+      <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme">☀️</button>
+      <button id="sound-toggle-btn" class="icon-btn" title="Toggle Sound">🔊</button>
+      <button id="lang-toggle-btn" class="btn btn-sm btn-outline">English</button>
+      <button id="leave-room-btn" class="btn btn-sm btn-danger" data-i18n="leaveRoomBtn">
+        🚪 مغادرة
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Room Layout Grid -->
+  <main class="room-main-content">
+    <!-- Active Game / Waiting Stage -->
+    <section class="room-game-stage" id="game-stage-container">
+      <div class="waiting-screen">
+        <h2 data-i18n="waitingForPlayers">جاري تحميل الغرفة...</h2>
+      </div>
+    </section>
+
+    <!-- Right Sidebar (Chat & Players) -->
+    <aside class="room-sidebar">
+      <div class="sidebar-tabs-bar">
+        <button class="sidebar-tab-btn active" data-tab="chat" data-i18n="chatTab">المحادثة</button>
+        <button class="sidebar-tab-btn" data-tab="players" data-i18n="playersTab">اللاعبون</button>
+      </div>
+
+      <!-- Chat Panel -->
+      <div class="sidebar-tab-panel active" id="panel-chat">
+        <div class="chat-messages-container" id="chat-messages-scroll">
+          <div class="chat-bubble system-message">
+            <span>📢 مرحبًا بك في الغرفة!</span>
+          </div>
+        </div>
+
+        <form id="chat-form" class="chat-input-bar">
+          <input type="text" id="chat-input-text" class="chat-input" placeholder="اكتب رسالة..." data-i18n-placeholder="sendMsgPlaceholder" maxlength="200" autocomplete="off">
+          <button type="submit" class="btn btn-sm btn-primary" data-i18n="sendBtn">إرسال</button>
+        </form>
+      </div>
+
+      <!-- Players Panel -->
+      <div class="sidebar-tab-panel" id="panel-players">
+        <div class="sidebar-players-list" id="sidebar-players-container"></div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="./js/room.js"></script>
+</body>
+</html>

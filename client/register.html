@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — Classic Games</title>
+  <link rel="stylesheet" href="./css/main.css">
+  <link rel="stylesheet" href="./css/auth.css">
+  <link rel="stylesheet" href="./css/responsive.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-container">
+      <a href="./index.html" class="brand-logo">
+        <span class="brand-icon">🎮</span>
+        <span data-i18n="brandTitle">Classic Games</span>
+      </a>
+
+      <div class="header-actions">
+        <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme">☀️</button>
+        <button id="lang-toggle-btn" class="btn btn-sm btn-outline">English</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1 data-i18n="registerTitle">إنشاء حساب جديد</h1>
+        <p class="auth-subtitle">انضم والعب واحفظ نتائجك وإحصائياتك</p>
+      </div>
+
+      <form id="register-form" class="auth-form">
+        <div class="form-group">
+          <label class="form-label" for="username" data-i18n="usernameLabel">اسم المستخدم:</label>
+          <input type="text" id="username" class="form-control" required minlength="3" maxlength="20" placeholder="HeroPlayer">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email" data-i18n="emailLabel">البريد الإلكتروني:</label>
+          <input type="email" id="email" class="form-control" required placeholder="player@example.com">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password" data-i18n="passwordLabel">كلمة المرور:</label>
+          <input type="password" id="password" class="form-control" required minlength="6" placeholder="••••••••">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="confirmPassword" data-i18n="confirmPasswordLabel">تأكيد كلمة المرور:</label>
+          <input type="password" id="confirmPassword" class="form-control" required minlength="6" placeholder="••••••••">
+        </div>
+
+        <!-- Avatar Selection -->
+        <div class="form-group">
+          <label class="form-label">اختر الأفاتار:</label>
+          <div style="display: flex; gap: 0.75rem; justify-content: center; margin-top: 0.5rem;">
+            <label style="cursor: pointer;"><input type="radio" name="avatar" value="avatar1" checked style="display:none;"><div class="avatar-badge avatar1"></div></label>
+            <label style="cursor: pointer;"><input type="radio" name="avatar" value="avatar2" style="display:none;"><div class="avatar-badge avatar2"></div></label>
+            <label style="cursor: pointer;"><input type="radio" name="avatar" value="avatar3" style="display:none;"><div class="avatar-badge avatar3"></div></label>
+            <label style="cursor: pointer;"><input type="radio" name="avatar" value="avatar4" style="display:none;"><div class="avatar-badge avatar4"></div></label>
+            <label style="cursor: pointer;"><input type="radio" name="avatar" value="avatar5" style="display:none;"><div class="avatar-badge avatar5"></div></label>
+            <label style="cursor: pointer;"><input type="radio" name="avatar" value="avatar6" style="display:none;"><div class="avatar-badge avatar6"></div></label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" data-i18n="navRegister">
+          إنشاء الحساب
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        <span data-i18n="alreadyHaveAccount">لديك حساب بالفعل؟</span>
+        <a href="./login.html" data-i18n="signInLink">سجل الدخول هنا</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>© 2026 Classic Games Online</p>
+  </footer>
+
+  <script type="module" src="./js/auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+/**
+ * English Language Translations
+ */
+export const en = {
+  // Navigation & Brand
+  brandTitle: "Classic Games",
+  brandSubtitle: "Play With Friends Online",
+  navHome: "Home",
+  navLobby: "Lobby",
+  navProfile: "Profile",
+  navSettings: "Settings",
+  navLogin: "Login",
+  navRegister: "Register",
+  navLogout: "Logout",
+
+  // Home Page
+  heroTitle: "Classic Games — Play With Friends",
+  heroSubtitle: "Real-time multiplayer UNO, Baloot, Chess, Domino, and Cards right in your browser.",
+  playNow: "Play Now",
+  createRoom: "Create Room",
+  joinRoom: "Join Room",
+  featuredGames: "Featured Games",
+  howItWorks: "How It Works",
+  step1Title: "1. Choose a Game",
+  step1Desc: "Pick UNO, Baloot, Chess, Domino, or Classic Cards.",
+  step2Title: "2. Create a Room",
+  step2Desc: "Customize turn timers, rules, and privacy mode.",
+  step3Title: "3. Share Code",
+  step3Desc: "Send the 6-character room code to your friends.",
+  step4Title: "4. Play & Enjoy",
+  step4Desc: "Compete in real time with private hands and live chat.",
+
+  // Auth
+  loginTitle: "Sign In to Your Account",
+  registerTitle: "Create a Free Account",
+  guestLogin: "Play as Guest",
+  guestNote: "Quickly jump into games without an email",
+  usernameLabel: "Username",
+  emailLabel: "Email Address",
+  passwordLabel: "Password",
+  confirmPasswordLabel: "Confirm Password",
+  rememberMe: "Remember me",
+  dontHaveAccount: "Don't have an account?",
+  alreadyHaveAccount: "Already have an account?",
+  signUpLink: "Sign up here",
+  signInLink: "Sign in here",
+  loginSuccess: "Logged in successfully!",
+  registerSuccess: "Account created successfully!",
+
+  // Lobby
+  openRooms: "Open Rooms",
+  filterAll: "All Games",
+  searchPlaceholder: "Search room code or host...",
+  noRoomsFound: "No active public rooms right now. Create one!",
+  roomCodeCol: "Room Code",
+  gameCol: "Game",
+  hostCol: "Host",
+  playersCol: "Players",
+  statusCol: "Status",
+  actionCol: "Action",
+  joinBtn: "Join",
+  createRoomModalTitle: "Create New Game Room",
+  selectGameLabel: "Select Game",
+  roomTypeLabel: "Room Visibility",
+  publicRoom: "Public (Listed in Lobby)",
+  privateRoom: "Private (Code only)",
+  maxPlayersLabel: "Max Players",
+  enterRoomCodePrompt: "Enter 6-letter Room Code:",
+  joinModalTitle: "Join Game Room",
+
+  // Game Room
+  roomTitle: "Room",
+  waitingForPlayers: "Waiting for players to join...",
+  startGameBtn: "Start Game",
+  restartGameBtn: "Restart Match",
+  leaveRoomBtn: "Leave Room",
+  settingsBtn: "Room Settings",
+  copyCode: "Copy Code",
+  codeCopied: "Room code copied to clipboard!",
+  chatTab: "Chat",
+  playersTab: "Players",
+  sendMsgPlaceholder: "Type a message...",
+  sendBtn: "Send",
+  hostBadge: "Host",
+  turnIndicator: "'s Turn",
+  yourTurn: "It's your turn!",
+  waitingTurn: "Waiting for opponent...",
+  gameOverTitle: "Game Over",
+  winnerAnnouncement: "Winner:",
+  roundOverTitle: "Round Finished",
+  nextRoundBtn: "Next Round",
+
+  // UNO Specific
+  unoCallBtn: "Call UNO!",
+  unoDrawBtn: "Draw Card",
+  unoPassBtn: "Pass Turn",
+  unoSelectColor: "Choose Wild Color",
+  unoPenaltyMessage: "Penalty cards drawn!",
+
+  // Chess Specific
+  chessCheck: "Check!",
+  chessCheckmate: "Checkmate!",
+  chessStalemate: "Stalemate!",
+  chessResignBtn: "Resign",
+  chessDrawOfferBtn: "Offer Draw",
+  chessWhite: "White",
+  chessBlack: "Black",
+
+  // Domino Specific
+  dominoDrawBtn: "Draw Tile",
+  dominoPassBtn: "Pass Turn",
+  dominoPickSide: "Choose Side to Play",
+  dominoLeft: "Play Left",
+  dominoRight: "Play Right",
+
+  // Baloot Specific
+  balootSun: "Sun (صن)",
+  balootHokom: "Hokom (حكم)",
+  balootPass: "Pass (بس)",
+  balootAshkal: "Ashkal (أشكال)",
+  balootTeam1: "Team 1 (North/South)",
+  balootTeam2: "Team 2 (East/West)",
+  balootRound: "Round",
+  balootContract: "Contract",
+
+  // Cards / Batta
+  cardsDrawBtn: "Draw Card",
+  cardsPassBtn: "Pass Turn",
+  cardsSelectSuit: "Choose New Suit",
+
+  // Rules Editor
+  rulesGeneralTab: "General",
+  rulesGameplayTab: "Gameplay",
+  rulesTimerTab: "Timer",
+  startingCardsRule: "Starting Cards/Tiles",
+  stackingRule: "Stacking Penalties (+2 / +4)",
+  jumpInRule: "Jump-In Play",
+  sevenZeroRule: "7-0 Rule (Swap Hands)",
+  drawUntilPlayableRule: "Draw Until Playable",
+  targetScoreRule: "Target Match Score",
+  turnTimerRule: "Turn Timer",
+  secondsLabel: "seconds",
+  timerOff: "No Timer",
+
+  // General Status & Alerts
+  connectionLost: "Disconnected... attempting to reconnect.",
+  reconnected: "Reconnected to server!",
+  errorTitle: "Error",
+  successTitle: "Success"
+};

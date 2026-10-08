@@ -14,12 +14,25 @@ export class BalootClient {
     this.state = null;
     this.selectedCardId = null;
     this.pendingRoundTwoHokom = false;
+    this.actionInFlight = false;
+    this.actionTimeout = null;
+  }
+
+  handleActionError(err) {
+    this.actionInFlight = false;
+    if (this.actionTimeout) clearTimeout(this.actionTimeout);
+    this.selectedCardId = null;
+    this.pendingRoundTwoHokom = false;
+    const modal = this.container.querySelector('#baloot-suit-modal');
+    if (modal) modal.classList.remove('active');
+    this.render();
   }
 
   update(gameState) {
     const prevTurn = this.state?.currentTurnPlayerId;
     this.state = gameState;
     this.actionInFlight = false;
+    if (this.actionTimeout) clearTimeout(this.actionTimeout);
 
     const myId = this.state.myPlayerId;
     if (this.state.currentTurnPlayerId === myId && prevTurn !== myId) {
@@ -95,6 +108,8 @@ export class BalootClient {
         }
 
         this.actionInFlight = true;
+        if (this.actionTimeout) clearTimeout(this.actionTimeout);
+        this.actionTimeout = setTimeout(() => { this.actionInFlight = false; }, 2000);
         sfx.click();
         const actionId = `baloot_bid_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         socket.sendGameAction({ type: 'BID', bid, actionId }, this.roomId);
@@ -106,6 +121,8 @@ export class BalootClient {
       btn.addEventListener('click', () => {
         if (this.actionInFlight) return;
         this.actionInFlight = true;
+        if (this.actionTimeout) clearTimeout(this.actionTimeout);
+        this.actionTimeout = setTimeout(() => { this.actionInFlight = false; }, 2000);
         const trumpSuit = btn.getAttribute('data-suit');
         sfx.click();
         const actionId = `baloot_hokom_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -120,6 +137,8 @@ export class BalootClient {
   playCard(cardId) {
     if (this.actionInFlight) return;
     this.actionInFlight = true;
+    if (this.actionTimeout) clearTimeout(this.actionTimeout);
+    this.actionTimeout = setTimeout(() => { this.actionInFlight = false; }, 2000);
     sfx.playCard();
     const actionId = `baloot_play_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     socket.sendGameAction({ type: 'PLAY_CARD', cardId, actionId }, this.roomId);

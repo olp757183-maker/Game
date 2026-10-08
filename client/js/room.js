@@ -19,6 +19,14 @@ import CardsClient from '../games/cards/cards-client.js';
 
 window.DEBUG_GAME = true;
 
+// Prevent any unhandled error from causing browser reload or white-screen crash
+window.addEventListener('error', (event) => {
+  console.warn('[ROOM_CLIENT_ERROR]', event.message);
+});
+window.addEventListener('unhandledrejection', (event) => {
+  console.warn('[ROOM_UNHANDLED_REJECTION]', event.reason);
+});
+
 let currentRoomData = null;
 let currentGameClient = null;
 let activeGameType = null;
@@ -163,10 +171,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('[Room] Socket disconnected, waiting for reconnection...');
   });
 
+  socket.on(SOCKET_EVENTS.GAME_ERROR, (err) => {
+    console.warn('[Room] Game action error for player:', err);
+    if (currentGameClient && typeof currentGameClient.handleActionError === 'function') {
+      try {
+        currentGameClient.handleActionError(err);
+      } catch (clientErr) {
+        console.error('[Room] Client error during handleActionError:', clientErr);
+      }
+    }
+  });
+
   socket.on('room:error', (err) => {
+    if (err && err.isPlayerError) return; // Ignore player move errors here
     console.error('[Room] Room error received:', err);
     const msg = i18n.getLanguage() === 'ar' ? (err.messageAr || err.messageEn || err.message) : (err.messageEn || err.messageAr || err.message);
-    showToast(msg || 'Room error', 'error');
 
     if (err.code === 'ROOM_NOT_FOUND' || err.code === 'ROOM_FULL') {
       const stage = document.getElementById('game-stage-container');
@@ -246,8 +265,16 @@ function handleRoomState(data) {
     }
 
     if (currentGameClient && game) {
-      game.myPlayerId = myId;
-      currentGameClient.update(game);
+      try {
+        game.myPlayerId = myId;
+        currentGameClient.update(game);
+      } catch (renderErr) {
+        console.error('[Room] Game client render caught error:', renderErr);
+        // Resync safely without reloading page!
+        setTimeout(() => {
+          socket.syncState(room.id);
+        }, 500);
+      }
     }
 
     // Check if round or match ended

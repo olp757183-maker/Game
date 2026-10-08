@@ -4,7 +4,7 @@
  */
 
 import crypto from 'node:crypto';
-import { UNO_COLORS, UNO_VALUES, GAME_STATUS } from '../../shared/constants.js';
+import { UNO_COLORS, UNO_VALUES, GAME_STATUS, ERROR_CODES, GameActionError } from '../../shared/constants.js';
 
 export class UnoGame {
   constructor({ room, players, rules }) {
@@ -48,6 +48,43 @@ export class UnoGame {
     this.players.forEach(p => {
       this.scores[p.id] = 0;
     });
+  }
+
+  createSnapshot() {
+    return {
+      players: this.players.map(p => ({
+        ...p,
+        hand: p.hand ? p.hand.map(c => ({ ...c })) : []
+      })),
+      deck: this.deck ? this.deck.map(c => ({ ...c })) : [],
+      discardPile: this.discardPile ? this.discardPile.map(c => ({ ...c })) : [],
+      currentTurnIndex: this.currentTurnIndex,
+      currentColor: this.currentColor,
+      direction: this.direction,
+      pendingDraw: this.pendingDraw,
+      status: this.status,
+      winner: this.winner,
+      scores: { ...this.scores },
+      version: this.version
+    };
+  }
+
+  restoreSnapshot(snap) {
+    if (!snap) return;
+    this.players = snap.players.map(p => ({
+      ...p,
+      hand: p.hand ? p.hand.map(c => ({ ...c })) : []
+    }));
+    this.deck = snap.deck ? snap.deck.map(c => ({ ...c })) : [];
+    this.discardPile = snap.discardPile ? snap.discardPile.map(c => ({ ...c })) : [];
+    this.currentTurnIndex = snap.currentTurnIndex;
+    this.currentColor = snap.currentColor;
+    this.direction = snap.direction;
+    this.pendingDraw = snap.pendingDraw;
+    this.status = snap.status;
+    this.winner = snap.winner;
+    this.scores = { ...snap.scores };
+    this.version = snap.version;
   }
 
   start() {
@@ -225,19 +262,19 @@ export class UnoGame {
 
   handleAction(playerId, action) {
     if (this.status === GAME_STATUS.MATCH_END || this.status === GAME_STATUS.FINISHED) {
-      throw new Error('Game has finished');
+      throw new GameActionError(ERROR_CODES.GAME_ALREADY_FINISHED, 'انتهت اللعبة بالفعل (Game has finished)', 'Game has finished');
     }
 
     if (action.type === 'NEXT_ROUND') {
       if (this.status !== GAME_STATUS.ROUND_END) {
-        throw new Error('Cannot start next round before round has ended');
+        throw new GameActionError(ERROR_CODES.INVALID_ACTION, 'لا يمكن بدء الجولة التالية الآن', 'Cannot start next round before round has ended');
       }
       this.startNextRound();
       return { success: true, event: 'NEXT_ROUND_STARTED', round: this.roundNumber };
     }
 
     if (this.status !== GAME_STATUS.PLAYING) {
-      throw new Error('Game is not in progress');
+      throw new GameActionError(ERROR_CODES.GAME_NOT_ACTIVE, 'اللعبة ليست جارية الآن', 'Game is not in progress');
     }
 
     let res;
@@ -263,7 +300,7 @@ export class UnoGame {
         break;
 
       default:
-        throw new Error(`Unknown UNO action: ${action.type}`);
+        throw new GameActionError(ERROR_CODES.INVALID_ACTION, `حركة غير معروفة: ${action.type}`, `Unknown UNO action: ${action.type}`);
     }
 
     this.version++;
@@ -275,10 +312,10 @@ export class UnoGame {
     const isCurrentTurn = (current.id === playerId);
 
     const player = this.players.find(p => p.id === playerId);
-    if (!player) throw new Error('Player not found');
+    if (!player) throw new GameActionError(ERROR_CODES.PLAYER_NOT_IN_GAME, 'اللاعب غير متواجد في المباراة', 'Player not found');
 
     const cardIndex = player.hand.findIndex(c => c.id === cardId);
-    if (cardIndex === -1) throw new Error('Card not in hand');
+    if (cardIndex === -1) throw new GameActionError(ERROR_CODES.CARD_NOT_IN_HAND, 'البطاقة غير موجودة بيدك', 'Card not in hand');
     const card = player.hand[cardIndex];
 
     // Jump-in check: If jumpIn rule enabled and player plays exact match out of turn
@@ -289,15 +326,15 @@ export class UnoGame {
           // Valid Jump-In! Turn jumps to this player
           this.currentTurnIndex = this.players.findIndex(p => p.id === playerId);
         } else {
-          throw new Error('ليست هذه حركتك');
+          throw new GameActionError(ERROR_CODES.NOT_YOUR_TURN, 'ليس دورك الآن (ليست هذه حركتك)', 'Not your turn');
         }
       } else {
-        throw new Error('ليست هذه حركتك');
+        throw new GameActionError(ERROR_CODES.NOT_YOUR_TURN, 'ليس دورك الآن (ليست هذه حركتك)', 'Not your turn');
       }
     }
 
     if (!this.isPlayable(card)) {
-      throw new Error('حركة غير قانونية');
+      throw new GameActionError(ERROR_CODES.INVALID_MOVE, 'حركة غير قانونية (هذه الحركة غير مسموحة)', 'Illegal move');
     }
 
     // If wild, require chosen color

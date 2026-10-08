@@ -105,6 +105,7 @@ class SocketClient {
         SOCKET_EVENTS.ROOM_SETTINGS_UPDATED,
         SOCKET_EVENTS.ROOM_STARTED,
         SOCKET_EVENTS.GAME_STATE,
+        SOCKET_EVENTS.GAME_ERROR,
         SOCKET_EVENTS.REMATCH_UPDATE,
         SOCKET_EVENTS.CHAT_BROADCAST,
         SOCKET_EVENTS.NOTIFICATION,
@@ -114,7 +115,8 @@ class SocketClient {
         SOCKET_EVENTS.LOBBY_ROOM_REMOVED,
         'player:skin:updated',
         'player:skin-updated',
-        'room:public-state'
+        'room:public-state',
+        'game:error'
       ];
 
       forwardEvents.forEach(evt => {
@@ -123,8 +125,20 @@ class SocketClient {
         }
       });
 
-      // Error event handling
+      // Player Game Action Error handling (Non-fatal, warning toast, no room break)
+      this.socket.on(SOCKET_EVENTS.GAME_ERROR, (err) => {
+        sfx.errorBuzz();
+        const msg = i18n.getLanguage() === 'ar'
+          ? (err.messageAr || err.message || 'هذه الحركة غير مسموحة')
+          : (err.messageEn || err.message || 'Illegal move');
+        showToast(msg, 'warning', 2500);
+        this.trigger(SOCKET_EVENTS.GAME_ERROR, err);
+        this.trigger('game:error', err);
+      });
+
+      // General Room Error event handling
       const handleErr = (err) => {
+        if (err && err.isPlayerError) return; // Handled by GAME_ERROR
         sfx.errorBuzz();
         const msg = i18n.getLanguage() === 'ar'
           ? (err.messageAr || err.messageEn || err.message || 'حدث خطأ')

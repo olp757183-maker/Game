@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { CHESS_COLORS, GAME_STATUS } from '../../shared/constants.js';
+import { CHESS_COLORS, GAME_STATUS, ERROR_CODES, GameActionError } from '../../shared/constants.js';
 
 export class ChessGame {
   constructor({ room, players, rules }) {
@@ -43,6 +43,49 @@ export class ChessGame {
     this.lastMoveTimestamp = Date.now();
     this.timerInterval = null;
     this.version = 1;
+  }
+
+  createSnapshot() {
+    return {
+      board: this.cloneBoard(this.board),
+      currentTurn: this.currentTurn,
+      moveHistory: [...this.moveHistory],
+      enPassantTarget: this.enPassantTarget ? { ...this.enPassantTarget } : null,
+      castlingRights: {
+        w: { ...this.castlingRights.w },
+        b: { ...this.castlingRights.b }
+      },
+      status: this.status,
+      inCheck: this.inCheck,
+      winner: this.winner,
+      loser: this.loser,
+      draw: this.draw,
+      reason: this.reason,
+      scores: { ...this.scores },
+      players: this.players.map(p => ({ ...p })),
+      version: this.version
+    };
+  }
+
+  restoreSnapshot(snap) {
+    if (!snap) return;
+    this.board = this.cloneBoard(snap.board);
+    this.currentTurn = snap.currentTurn;
+    this.moveHistory = [...snap.moveHistory];
+    this.enPassantTarget = snap.enPassantTarget ? { ...snap.enPassantTarget } : null;
+    this.castlingRights = {
+      w: { ...snap.castlingRights.w },
+      b: { ...snap.castlingRights.b }
+    };
+    this.status = snap.status;
+    this.inCheck = snap.inCheck;
+    this.winner = snap.winner;
+    this.loser = snap.loser;
+    this.draw = snap.draw;
+    this.reason = snap.reason;
+    this.scores = { ...snap.scores };
+    this.players = snap.players.map(p => ({ ...p }));
+    this.version = snap.version;
   }
 
   start() {
@@ -302,11 +345,11 @@ export class ChessGame {
 
   handleAction(playerId, action) {
     if (this.status === GAME_STATUS.MATCH_END || this.status === GAME_STATUS.FINISHED) {
-      throw new Error('Game has finished');
+      throw new GameActionError(ERROR_CODES.GAME_ALREADY_FINISHED, 'انتهت اللعبة بالفعل (Game has finished)', 'Game has finished');
     }
 
     const player = this.players.find(p => p.id === playerId);
-    if (!player) throw new Error('Player not in game');
+    if (!player) throw new GameActionError(ERROR_CODES.PLAYER_NOT_IN_GAME, 'اللاعب غير متواجد في المباراة', 'Player not in game');
 
     switch (action.type) {
       case 'MOVE':
@@ -322,18 +365,22 @@ export class ChessGame {
         return this.executeRespondDraw(player, action.accept);
 
       default:
-        throw new Error(`Unknown chess action: ${action.type}`);
+        throw new GameActionError(ERROR_CODES.INVALID_ACTION, `حركة غير معروفة: ${action.type}`, `Unknown chess action: ${action.type}`);
     }
   }
 
   executeMove(player, from, to, promotion = 'q') {
     if (player.color !== this.currentTurn) {
-      throw new Error('ليست هذه حركتك');
+      throw new GameActionError(ERROR_CODES.NOT_YOUR_TURN, 'ليس دورك الآن (ليست هذه حركتك)', 'Not your turn');
     }
 
-    const piece = this.board[from.row][from.col];
+    if (!from || !to || typeof from.row !== 'number' || typeof from.col !== 'number' || typeof to.row !== 'number' || typeof to.col !== 'number') {
+      throw new GameActionError(ERROR_CODES.INVALID_ACTION, 'إحداثيات الحركة غير صالحة', 'Invalid move coordinates');
+    }
+
+    const piece = this.board[from.row]?.[from.col];
     if (!piece || piece.color !== player.color) {
-      throw new Error('حركة غير قانونية');
+      throw new GameActionError(ERROR_CODES.INVALID_MOVE, 'حركة غير قانونية (هذه الحركة غير مسموحة)', 'Illegal move');
     }
 
     const legalMoves = this.getLegalMoves(player.color);
@@ -343,7 +390,7 @@ export class ChessGame {
     );
 
     if (!validMove) {
-      throw new Error('حركة غير قانونية');
+      throw new GameActionError(ERROR_CODES.INVALID_MOVE, 'حركة غير قانونية (هذه الحركة غير مسموحة)', 'Illegal move');
     }
 
     // Execute Move on Board

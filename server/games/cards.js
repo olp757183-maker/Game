@@ -4,7 +4,7 @@
  */
 
 import crypto from 'node:crypto';
-import { GAME_STATUS } from '../../shared/constants.js';
+import { GAME_STATUS, ERROR_CODES, GameActionError } from '../../shared/constants.js';
 
 export class CardsGame {
   constructor({ room, players, rules }) {
@@ -45,6 +45,43 @@ export class CardsGame {
     this.players.forEach(p => {
       this.scores[p.id] = 0;
     });
+  }
+
+  createSnapshot() {
+    return {
+      players: this.players.map(p => ({
+        ...p,
+        hand: p.hand ? p.hand.map(c => ({ ...c })) : []
+      })),
+      deck: this.deck ? this.deck.map(c => ({ ...c })) : [],
+      discardPile: this.discardPile ? this.discardPile.map(c => ({ ...c })) : [],
+      activeSuit: this.activeSuit,
+      currentTurnIndex: this.currentTurnIndex,
+      direction: this.direction,
+      pendingDraw: this.pendingDraw,
+      status: this.status,
+      winner: this.winner,
+      scores: { ...this.scores },
+      version: this.version
+    };
+  }
+
+  restoreSnapshot(snap) {
+    if (!snap) return;
+    this.players = snap.players.map(p => ({
+      ...p,
+      hand: p.hand ? p.hand.map(c => ({ ...c })) : []
+    }));
+    this.deck = snap.deck ? snap.deck.map(c => ({ ...c })) : [];
+    this.discardPile = snap.discardPile ? snap.discardPile.map(c => ({ ...c })) : [];
+    this.activeSuit = snap.activeSuit;
+    this.currentTurnIndex = snap.currentTurnIndex;
+    this.direction = snap.direction;
+    this.pendingDraw = snap.pendingDraw;
+    this.status = snap.status;
+    this.winner = snap.winner;
+    this.scores = { ...snap.scores };
+    this.version = snap.version;
   }
 
   start() {
@@ -152,24 +189,24 @@ export class CardsGame {
 
   handleAction(playerId, action) {
     if (this.status === GAME_STATUS.MATCH_END || this.status === GAME_STATUS.FINISHED) {
-      throw new Error('Game has finished');
+      throw new GameActionError(ERROR_CODES.GAME_ALREADY_FINISHED, 'انتهت اللعبة بالفعل (Game has finished)', 'Game has finished');
     }
 
     if (action.type === 'NEXT_ROUND') {
       if (this.status !== GAME_STATUS.ROUND_END) {
-        throw new Error('Cannot start next round before round has ended');
+        throw new GameActionError(ERROR_CODES.INVALID_ACTION, 'لا يمكن بدء الجولة التالية الآن', 'Cannot start next round before round has ended');
       }
       this.startNextRound();
       return { success: true, event: 'NEXT_ROUND_STARTED', round: this.roundNumber };
     }
 
     if (this.status !== GAME_STATUS.PLAYING) {
-      throw new Error('Game is not in progress');
+      throw new GameActionError(ERROR_CODES.GAME_NOT_ACTIVE, 'اللعبة ليست جارية الآن', 'Game is not in progress');
     }
 
     const current = this.getCurrentPlayer();
     if (current.id !== playerId) {
-      throw new Error('ليست هذه حركتك');
+      throw new GameActionError(ERROR_CODES.NOT_YOUR_TURN, 'ليس دورك الآن', 'Not your turn');
     }
 
     let res;
@@ -187,7 +224,7 @@ export class CardsGame {
         break;
 
       default:
-        throw new Error(`حركة غير معروفة: ${action.type}`);
+        throw new GameActionError(ERROR_CODES.INVALID_ACTION, `حركة غير معروفة: ${action.type}`, `Unknown cards action: ${action.type}`);
     }
 
     this.version++;
@@ -196,11 +233,11 @@ export class CardsGame {
 
   executePlay(player, cardId, chosenSuit) {
     const cardIndex = player.hand.findIndex(c => c.id === cardId);
-    if (cardIndex === -1) throw new Error('الورقة غير موجودة بيدك');
+    if (cardIndex === -1) throw new GameActionError(ERROR_CODES.CARD_NOT_IN_HAND, 'الورقة غير موجودة بيدك', 'Card not in hand');
     const card = player.hand[cardIndex];
 
     if (!this.isPlayable(card)) {
-      throw new Error('حركة غير قانونية');
+      throw new GameActionError(ERROR_CODES.INVALID_MOVE, 'هذه الحركة غير مسموحة', 'Illegal move');
     }
 
     // If 8 played, chosenSuit is required

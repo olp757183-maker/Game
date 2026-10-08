@@ -15,12 +15,24 @@ export class CardsClient {
     this.selectedCardId = null;
     this.selectedEightCardId = null;
     this.actionInFlight = false;
+    this.actionTimeout = null;
+  }
+
+  handleActionError(err) {
+    this.actionInFlight = false;
+    if (this.actionTimeout) clearTimeout(this.actionTimeout);
+    this.selectedCardId = null;
+    this.selectedEightCardId = null;
+    const modal = this.container.querySelector('#cards-suit-modal');
+    if (modal) modal.classList.remove('active');
+    this.render();
   }
 
   update(gameState) {
     const prevTurn = this.state?.currentTurnPlayerId;
     this.state = gameState;
     this.actionInFlight = false;
+    if (this.actionTimeout) clearTimeout(this.actionTimeout);
 
     const myId = this.state.myPlayerId;
     if (this.state.currentTurnPlayerId === myId && prevTurn !== myId) {
@@ -137,6 +149,8 @@ export class CardsClient {
   playCard(cardId, chosenSuit = null) {
     if (this.actionInFlight) return;
     this.actionInFlight = true;
+    if (this.actionTimeout) clearTimeout(this.actionTimeout);
+    this.actionTimeout = setTimeout(() => { this.actionInFlight = false; }, 2000);
     sfx.playCard();
     const actionId = `cards_play_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     socket.sendGameAction({
@@ -150,6 +164,8 @@ export class CardsClient {
   drawCard() {
     if (this.actionInFlight) return;
     this.actionInFlight = true;
+    if (this.actionTimeout) clearTimeout(this.actionTimeout);
+    this.actionTimeout = setTimeout(() => { this.actionInFlight = false; }, 2000);
     sfx.drawCard();
     const actionId = `cards_draw_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     socket.sendGameAction({ type: 'DRAW_CARD', actionId }, this.roomId);
@@ -158,6 +174,8 @@ export class CardsClient {
   passTurn() {
     if (this.actionInFlight) return;
     this.actionInFlight = true;
+    if (this.actionTimeout) clearTimeout(this.actionTimeout);
+    this.actionTimeout = setTimeout(() => { this.actionInFlight = false; }, 2000);
     sfx.click();
     const actionId = `cards_pass_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     socket.sendGameAction({ type: 'PASS_TURN', actionId }, this.roomId);

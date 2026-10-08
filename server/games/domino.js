@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { GAME_STATUS } from '../../shared/constants.js';
+import { GAME_STATUS, ERROR_CODES, GameActionError } from '../../shared/constants.js';
 
 export class DominoGame {
   constructor({ room, players, rules }) {
@@ -39,6 +39,43 @@ export class DominoGame {
     this.players.forEach(p => {
       this.scores[p.id] = 0;
     });
+  }
+
+  createSnapshot() {
+    return {
+      players: this.players.map(p => ({
+        ...p,
+        hand: p.hand ? p.hand.map(t => ({ ...t })) : []
+      })),
+      board: this.board.map(t => ({ ...t })),
+      boneyard: this.boneyard.map(t => ({ ...t })),
+      leftEnd: this.leftEnd,
+      rightEnd: this.rightEnd,
+      currentTurnIndex: this.currentTurnIndex,
+      consecutivePasses: this.consecutivePasses,
+      status: this.status,
+      winner: this.winner,
+      scores: { ...this.scores },
+      version: this.version
+    };
+  }
+
+  restoreSnapshot(snap) {
+    if (!snap) return;
+    this.players = snap.players.map(p => ({
+      ...p,
+      hand: p.hand ? p.hand.map(t => ({ ...t })) : []
+    }));
+    this.board = snap.board.map(t => ({ ...t }));
+    this.boneyard = snap.boneyard.map(t => ({ ...t }));
+    this.leftEnd = snap.leftEnd;
+    this.rightEnd = snap.rightEnd;
+    this.currentTurnIndex = snap.currentTurnIndex;
+    this.consecutivePasses = snap.consecutivePasses;
+    this.status = snap.status;
+    this.winner = snap.winner;
+    this.scores = { ...snap.scores };
+    this.version = snap.version;
   }
 
   start() {
@@ -132,12 +169,12 @@ export class DominoGame {
 
   handleAction(playerId, action) {
     if (this.status === GAME_STATUS.MATCH_END || this.status === GAME_STATUS.FINISHED) {
-      throw new Error('Game has finished');
+      throw new GameActionError(ERROR_CODES.GAME_ALREADY_FINISHED, 'انتهت اللعبة بالفعل (Game has finished)', 'Game has finished');
     }
 
     if (action.type === 'NEXT_ROUND') {
       if (this.status !== GAME_STATUS.ROUND_END) {
-        throw new Error('Cannot start next round before current round ends');
+        throw new GameActionError(ERROR_CODES.INVALID_ACTION, 'لا يمكن بدء الجولة التالية الآن', 'Cannot start next round before current round ends');
       }
       this.startNextRound();
       return { success: true, event: 'NEXT_ROUND_STARTED', round: this.roundNumber };
@@ -145,7 +182,7 @@ export class DominoGame {
 
     const current = this.getCurrentPlayer();
     if (current.id !== playerId) {
-      throw new Error('ليست هذه حركتك');
+      throw new GameActionError(ERROR_CODES.NOT_YOUR_TURN, 'ليس دورك الآن', 'Not your turn');
     }
 
     let res;
@@ -163,7 +200,7 @@ export class DominoGame {
         break;
 
       default:
-        throw new Error(`حركة غير معروفة: ${action.type}`);
+        throw new GameActionError(ERROR_CODES.INVALID_ACTION, `حركة غير معروفة: ${action.type}`, `Unknown domino action: ${action.type}`);
     }
 
     this.version++;
@@ -173,7 +210,7 @@ export class DominoGame {
   executePlay(player, tileId, requestedSide = 'right') {
     const tileIndex = player.hand.findIndex(t => t.id === tileId);
     if (tileIndex === -1) {
-      throw new Error('القطعة غير موجودة بيدك');
+      throw new GameActionError(ERROR_CODES.TILE_NOT_IN_HAND, 'القطعة غير موجودة بيدك', 'Tile not in hand');
     }
     const tile = player.hand[tileIndex];
 
@@ -203,7 +240,7 @@ export class DominoGame {
     const canRight = (tile.left === this.rightEnd || tile.right === this.rightEnd);
 
     if (!canLeft && !canRight) {
-      throw new Error('حركة غير قانونية');
+      throw new GameActionError(ERROR_CODES.INVALID_MOVE, 'حركة غير قانونية (هذه الحركة غير مسموحة)', 'Illegal move');
     }
 
     // Auto-pick side if only one side is legal
@@ -212,7 +249,7 @@ export class DominoGame {
 
     // Place on Left
     if (side === 'left') {
-      if (!canLeft) throw new Error('حركة غير قانونية');
+      if (!canLeft) throw new GameActionError(ERROR_CODES.INVALID_MOVE, 'حركة غير قانونية (هذه الحركة غير مسموحة)', 'Illegal move');
       player.hand.splice(tileIndex, 1);
 
       let placedTile;

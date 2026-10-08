@@ -14,12 +14,25 @@ export class ChessClient {
     this.state = null;
     this.selectedSquare = null; // { row, col }
     this.pendingPromotionMove = null;
+    this.actionInFlight = false;
+    this.actionTimeout = null;
+  }
+
+  handleActionError(err) {
+    this.actionInFlight = false;
+    if (this.actionTimeout) clearTimeout(this.actionTimeout);
+    this.selectedSquare = null;
+    this.pendingPromotionMove = null;
+    const modal = this.container.querySelector('#chess-promotion-modal');
+    if (modal) modal.classList.remove('active');
+    this.render();
   }
 
   update(gameState) {
     const prevTurn = this.state?.currentTurn;
     this.state = gameState;
     this.actionInFlight = false;
+    if (this.actionTimeout) clearTimeout(this.actionTimeout);
 
     const isMyTurn = (this.state.myPlayerId === this.state.currentTurn) ||
                      (this.state.myPlayerId === this.state.currentTurnPlayerId) ||
@@ -143,6 +156,8 @@ export class ChessClient {
   executeMove(from, to, promotion = 'q') {
     if (this.actionInFlight) return;
     this.actionInFlight = true;
+    if (this.actionTimeout) clearTimeout(this.actionTimeout);
+    this.actionTimeout = setTimeout(() => { this.actionInFlight = false; }, 2000);
     sfx.playCard();
     const actionId = `chess_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     socket.sendGameAction({

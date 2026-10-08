@@ -115,6 +115,7 @@ export const SOCKET_EVENTS = {
   CHAT_BROADCAST: 'chat:broadcast',
   ERROR: 'room:error',
   ERROR_MESSAGE: 'error:message',
+  GAME_ERROR: 'game:error',
   NOTIFICATION: 'system:notification',
   ROOM_CLOSED: 'room:closed',
 
@@ -123,6 +124,32 @@ export const SOCKET_EVENTS = {
   LOBBY_ROOM_UPDATED: 'lobby:room-updated',
   LOBBY_ROOM_REMOVED: 'lobby:room-removed'
 };
+
+export const ERROR_CODES = {
+  NOT_YOUR_TURN: 'NOT_YOUR_TURN',
+  INVALID_MOVE: 'INVALID_MOVE',
+  INVALID_ACTION: 'INVALID_ACTION',
+  CARD_NOT_IN_HAND: 'CARD_NOT_IN_HAND',
+  TILE_NOT_IN_HAND: 'TILE_NOT_IN_HAND',
+  GAME_ALREADY_FINISHED: 'GAME_ALREADY_FINISHED',
+  GAME_NOT_ACTIVE: 'GAME_NOT_ACTIVE',
+  PLAYER_NOT_IN_GAME: 'PLAYER_NOT_IN_GAME',
+  ROOM_NOT_FOUND: 'ROOM_NOT_FOUND',
+  ROOM_FULL: 'ROOM_FULL',
+  DUPLICATE_ACTION: 'DUPLICATE_ACTION',
+  INTERNAL_ERROR: 'INTERNAL_ERROR'
+};
+
+export class GameActionError extends Error {
+  constructor(code, messageAr, messageEn) {
+    super(messageAr || messageEn || code);
+    this.name = 'GameActionError';
+    this.code = code;
+    this.messageAr = messageAr;
+    this.messageEn = messageEn;
+    this.isPlayerError = true;
+  }
+}
 
 export const UNO_COLORS = {
   RED: 'red',

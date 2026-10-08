@@ -8,7 +8,7 @@ import auth from './auth.js';
 import users from './users.js';
 import rooms, { activeRooms } from './rooms.js';
 import database from './database.js';
-import { SOCKET_EVENTS, ROOM_STATUS } from '../shared/constants.js';
+import { SOCKET_EVENTS, ROOM_STATUS, ERROR_CODES, GameActionError } from '../shared/constants.js';
 import { sanitizeChatMessage } from '../shared/validation.js';
 
 // Import Game Engines
@@ -469,77 +469,173 @@ export function setupSocketServer(httpServer) {
       }
     });
 
-    // Game Action (Server Authoritative)
+    // Game Action (Server Authoritative with Atomic Validation & Rollback)
     socket.on(SOCKET_EVENTS.GAME_ACTION, ({ roomId, action, actionId }) => {
       try {
         const effActionId = actionId || action?.actionId;
-        if (effActionId) {
-          const dupKey = `${roomId}:${effActionId}`;
-          if (processedActions.has(dupKey)) {
-            console.log(`[GAME ACTION DUPLICATE IGNORED] key=${dupKey} user=${user.username}`);
-            const r = rooms.getRoomById(roomId);
-            if (r) {
-              socket.emit(SOCKET_EVENTS.ROOM_STATE, r.getStateForPlayer(user.id));
-              if (r.gameInstance) {
-                socket.emit(SOCKET_EVENTS.GAME_STATE, r.gameInstance.getStateForPlayer(user.id));
+
+        // 1. Validate request payload shape
+        if (!roomId || typeof roomId !== 'string' || !action || typeof action !== 'object' || !action.type) {
+          socket.emit(SOCKET_EVENTS.GAME_ERROR, {
+            code: ERROR_CODES.INVALID_ACTION,
+            messageAr: 'بيانات الحركة غير صالحة',
+            messageEn: 'Invalid action payload',
+            actionId: effActionId,
+            isPlayerError: true
+          });
+          return;
+        }
+
+        // 2. Validate Room
+        const targetRoomId = roomId || socketRoomMap.get(socket.id);
+        const room = rooms.getRoomById(targetRoomId);
+        if (!room) {
+          socket.emit(SOCKET_EVENTS.GAME_ERROR, {
+            code: ERROR_CODES.ROOM_NOT_FOUND,
+            messageAr: 'الغرفة غير موجودة',
+            messageEn: 'Room not found',
+            actionId: effActionId,
+            isPlayerError: true
+          });
+          return;
+        }
+
+        // 3. Validate Player is member of Room
+        const isPlayer = room.players.some(p => p.id === user.id);
+        if (!isPlayer) {
+          socket.emit(SOCKET_EVENTS.GAME_ERROR, {
+            code: ERROR_CODES.PLAYER_NOT_IN_GAME,
+            messageAr: 'أنت لست عضواً في هذه الغرفة',
+            messageEn: 'Player not member of room',
+            actionId: effActionId,
+            isPlayerError: true
+          });
+          return;
+        }
+
+        // 4. Validate Game is Active
+        if (!room.gameInstance || room.status !== ROOM_STATUS.PLAYING) {
+          const isFinished = room.status === ROOM_STATUS.FINISHED || (room.gameInstance && (room.gameInstance.status === 'MATCH_END' || room.gameInstance.status === 'FINISHED' || room.gameInstance.status === 'GAME_OVER'));
+          socket.emit(SOCKET_EVENTS.GAME_ERROR, {
+            code: isFinished ? ERROR_CODES.GAME_ALREADY_FINISHED : ERROR_CODES.GAME_NOT_ACTIVE,
+            messageAr: isFinished ? 'انتهت اللعبة بالفعل' : 'لا توجد مباراة نشطة حالياً',
+            messageEn: isFinished ? 'Game already finished' : 'No game currently active',
+            actionId: effActionId,
+            isPlayerError: true
+          });
+          if (room.gameInstance) {
+            socket.emit(SOCKET_EVENTS.GAME_STATE, room.gameInstance.getStateForPlayer(user.id));
+          }
+          return;
+        }
+
+        // 5. Deduplication check (Idempotency)
+        const dupKey = effActionId ? `${room.id}:${user.id}:${effActionId}` : null;
+        if (dupKey && processedActions.has(dupKey)) {
+          console.log(`[GAME ACTION DUPLICATE IGNORED] key=${dupKey} user=${user.username}`);
+          socket.emit(SOCKET_EVENTS.GAME_STATE, room.gameInstance.getStateForPlayer(user.id));
+          return;
+        }
+
+        console.log(`[GAME ACTION] user=${user.username} roomId=${room.id} action=${action.type} id=${effActionId}`);
+
+        // 6. Snapshot current game state before execution (Atomic Transaction)
+        const snapshot = (typeof room.gameInstance.createSnapshot === 'function')
+          ? room.gameInstance.createSnapshot()
+          : null;
+
+        try {
+          // Execute authoritative game action
+          const result = room.gameInstance.handleAction(user.id, action);
+
+          // Mark actionId as processed successfully
+          if (dupKey) {
+            processedActions.set(dupKey, Date.now());
+          }
+
+          // Increment versions
+          if (room.gameInstance) {
+            room.gameInstance.version = (room.gameInstance.version || 0) + 1;
+          }
+          room.version++;
+
+          // Check if match ended and record stats & match result
+          const game = room.gameInstance;
+          if (game.status === 'GAME_OVER' || game.status === 'MATCH_END' || game.status === 'FINISHED') {
+            room.status = ROOM_STATUS.FINISHED;
+            database.updateRoomStatus(room.id, ROOM_STATUS.FINISHED);
+
+            try {
+              database.recordMatchResult({
+                gameId: game.gameId || `g_${Date.now()}`,
+                roomId: room.id,
+                gameType: room.gameType,
+                players: room.players.map(p => ({ id: p.id, username: p.username })),
+                winner: game.winner,
+                loser: game.loser,
+                draw: Boolean(game.draw),
+                reason: game.reason || 'NORMAL_FINISH',
+                scores: game.scores || {},
+                startedAt: game.startedAt || Date.now(),
+                endedAt: game.endedAt || Date.now()
+              });
+
+              const winnerName = game.winner;
+              for (const p of room.players) {
+                const won = (p.username === winnerName);
+                const pScore = (game.scores && (game.scores[p.id] || game.scores[p.username])) || 0;
+                database.recordGameStat(p.id, room.gameType, won, pScore);
               }
+            } catch (dbErr) {
+              console.error('Failed to record match stats:', dbErr);
             }
-            return;
+            broadcastLobbyRoomUpdated(room);
           }
-          processedActions.set(dupKey, Date.now());
-        }
 
-        console.log(`[GAME ACTION] user=${user.username} roomId=${roomId} action=${action?.type} id=${effActionId}`);
-        const room = rooms.getRoomById(roomId);
-        if (!room) throw new Error('Room not found');
-        if (!room.gameInstance) throw new Error('No game is currently active');
+          // Broadcast valid new state to ALL players in room
+          broadcastRoomState(room);
 
-        const result = room.gameInstance.handleAction(user.id, action);
-
-        // Increment version
-        if (room.gameInstance) {
-          room.gameInstance.version = (room.gameInstance.version || 0) + 1;
-        }
-        room.version++;
-
-        // Check if match ended and record stats & match result
-        const game = room.gameInstance;
-        if (game.status === 'GAME_OVER' || game.status === 'MATCH_END' || game.status === 'FINISHED') {
-          room.status = ROOM_STATUS.FINISHED;
-          database.updateRoomStatus(room.id, ROOM_STATUS.FINISHED);
-
-          try {
-            database.recordMatchResult({
-              gameId: game.gameId || `g_${Date.now()}`,
-              roomId: room.id,
-              gameType: room.gameType,
-              players: room.players.map(p => ({ id: p.id, username: p.username })),
-              winner: game.winner,
-              loser: game.loser,
-              draw: Boolean(game.draw),
-              reason: game.reason || 'NORMAL_FINISH',
-              scores: game.scores || {},
-              startedAt: game.startedAt || Date.now(),
-              endedAt: game.endedAt || Date.now()
-            });
-
-            const winnerName = game.winner;
-            for (const p of room.players) {
-              const won = (p.username === winnerName);
-              const pScore = (game.scores && (game.scores[p.id] || game.scores[p.username])) || 0;
-              database.recordGameStat(p.id, room.gameType, won, pScore);
-            }
-          } catch (dbErr) {
-            console.error('Failed to record match stats:', dbErr);
+        } catch (actionErr) {
+          // ATOMIC ROLLBACK: Restore state snapshot so game state is pristine!
+          if (snapshot && typeof room.gameInstance.restoreSnapshot === 'function') {
+            room.gameInstance.restoreSnapshot(snapshot);
           }
-          broadcastLobbyRoomUpdated(room);
-        }
 
-        broadcastRoomState(room);
-      } catch (err) {
-        socket.emit(SOCKET_EVENTS.ERROR, {
-          messageEn: err.message || 'Illegal move',
-          messageAr: err.message || 'حركة غير قانونية'
+          console.warn(`[GAME_ACTION_REJECTED] user=${user.username} action=${action?.type} code=${actionErr.code || 'ERR'} reason=${actionErr.message}`);
+
+          const errorCode = actionErr.code || (
+            (actionErr.message && (actionErr.message.includes('دورك') || actionErr.message.includes('حركتك')))
+              ? ERROR_CODES.NOT_YOUR_TURN
+              : ERROR_CODES.INVALID_MOVE
+          );
+          const messageAr = actionErr.messageAr || actionErr.message || 'هذه الحركة غير مسموحة';
+          const messageEn = actionErr.messageEn || actionErr.message || 'Illegal move';
+
+          const errPayload = {
+            code: errorCode,
+            messageAr,
+            messageEn,
+            actionId: effActionId,
+            isPlayerError: true
+          };
+
+          // Emit GAME_ERROR & ERROR to THIS PLAYER'S SOCKET ONLY!
+          // NEVER broadcast error to other players!
+          socket.emit(SOCKET_EVENTS.GAME_ERROR, errPayload);
+          socket.emit(SOCKET_EVENTS.ERROR, errPayload);
+
+          // Resend current valid state to THIS player so their UI resynchronizes instantly without refresh!
+          if (room.gameInstance) {
+            socket.emit(SOCKET_EVENTS.GAME_STATE, room.gameInstance.getStateForPlayer(user.id));
+          }
+        }
+      } catch (fatalErr) {
+        console.error('[UNEXPECTED_GAME_ACTION_ERROR]', fatalErr);
+        socket.emit(SOCKET_EVENTS.GAME_ERROR, {
+          code: ERROR_CODES.INTERNAL_ERROR,
+          messageAr: 'حدث خطأ في معالجة الحركة',
+          messageEn: 'Internal error processing action',
+          isPlayerError: true
         });
       }
     });

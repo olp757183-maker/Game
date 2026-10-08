@@ -4,7 +4,7 @@
  */
 
 import crypto from 'node:crypto';
-import { BALOOT_SUITS, BALOOT_BIDS, GAME_STATUS } from '../../shared/constants.js';
+import { BALOOT_SUITS, BALOOT_BIDS, GAME_STATUS, ERROR_CODES, GameActionError } from '../../shared/constants.js';
 
 export class BalootGame {
   constructor({ room, players, rules }) {
@@ -49,6 +49,49 @@ export class BalootGame {
     this.startedAt = Date.now();
     this.endedAt = null;
     this.version = 1;
+  }
+
+  createSnapshot() {
+    return {
+      players: this.players.map(p => ({
+        ...p,
+        hand: p.hand ? p.hand.map(c => ({ ...c })) : []
+      })),
+      deck: this.deck ? this.deck.map(c => ({ ...c })) : [],
+      floorCard: this.floorCard ? { ...this.floorCard } : null,
+      status: this.status,
+      contract: this.contract ? { ...this.contract } : null,
+      currentTrick: this.currentTrick ? this.currentTrick.map(t => ({ ...t, card: { ...t.card } })) : [],
+      tricksCompleted: this.tricksCompleted,
+      currentTurnIndex: this.currentTurnIndex,
+      consecutivePasses: this.consecutivePasses,
+      biddingRound: this.biddingRound,
+      teamAbnat: [...this.teamAbnat],
+      teamScores: [...this.teamScores],
+      scores: { ...this.scores },
+      version: this.version
+    };
+  }
+
+  restoreSnapshot(snap) {
+    if (!snap) return;
+    this.players = snap.players.map(p => ({
+      ...p,
+      hand: p.hand ? p.hand.map(c => ({ ...c })) : []
+    }));
+    this.deck = snap.deck ? snap.deck.map(c => ({ ...c })) : [];
+    this.floorCard = snap.floorCard ? { ...snap.floorCard } : null;
+    this.status = snap.status;
+    this.contract = snap.contract ? { ...snap.contract } : null;
+    this.currentTrick = snap.currentTrick ? snap.currentTrick.map(t => ({ ...t, card: { ...t.card } })) : [];
+    this.tricksCompleted = snap.tricksCompleted;
+    this.currentTurnIndex = snap.currentTurnIndex;
+    this.consecutivePasses = snap.consecutivePasses;
+    this.biddingRound = snap.biddingRound;
+    this.teamAbnat = [...snap.teamAbnat];
+    this.teamScores = [...snap.teamScores];
+    this.scores = { ...snap.scores };
+    this.version = snap.version;
   }
 
   start() {
@@ -109,12 +152,12 @@ export class BalootGame {
 
   handleAction(playerId, action) {
     if (this.status === GAME_STATUS.MATCH_END || this.status === GAME_STATUS.FINISHED) {
-      throw new Error('Game has finished');
+      throw new GameActionError(ERROR_CODES.GAME_ALREADY_FINISHED, 'انتهت اللعبة بالفعل (Game has finished)', 'Game has finished');
     }
 
     if (action.type === 'NEXT_ROUND') {
       if (this.status !== GAME_STATUS.ROUND_END) {
-        throw new Error('Cannot start next round before current round has ended');
+        throw new GameActionError(ERROR_CODES.INVALID_ACTION, 'لا يمكن بدء الجولة التالية الآن', 'Cannot start next round before current round has ended');
       }
       this.startNextRound();
       return { success: true, event: 'NEXT_ROUND_STARTED', round: this.roundNumber };
@@ -122,7 +165,7 @@ export class BalootGame {
 
     const current = this.getCurrentPlayer();
     if (current.id !== playerId) {
-      throw new Error('ليست هذه حركتك');
+      throw new GameActionError(ERROR_CODES.NOT_YOUR_TURN, 'ليس دورك الآن', 'Not your turn');
     }
 
     let res;
@@ -131,7 +174,7 @@ export class BalootGame {
     } else if (this.status === 'PLAYING') {
       res = this.handlePlayAction(current, action);
     } else {
-      throw new Error('Action cannot be performed right now');
+      throw new GameActionError(ERROR_CODES.INVALID_ACTION, 'لا يمكن تنفيذ حركة في هذه المرحلة', 'Action cannot be performed right now');
     }
 
     this.version++;
@@ -238,12 +281,12 @@ export class BalootGame {
   handlePlayAction(player, action) {
     const cardId = action.cardId;
     const cardIndex = player.hand.findIndex(c => c.id === cardId);
-    if (cardIndex === -1) throw new Error('Card not in hand');
+    if (cardIndex === -1) throw new GameActionError(ERROR_CODES.CARD_NOT_IN_HAND, 'الورقة غير موجودة بيدك', 'Card not in hand');
     const card = player.hand[cardIndex];
 
     // Validate legal card play
     if (!this.isCardPlayable(player, card)) {
-      throw new Error('حركة غير قانونية');
+      throw new GameActionError(ERROR_CODES.INVALID_MOVE, 'هذه الحركة غير مسموحة', 'Illegal move');
     }
 
     // Play card

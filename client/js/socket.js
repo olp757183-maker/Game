@@ -43,9 +43,12 @@ class SocketClient {
     }
 
     this.connectPromise = new Promise((resolve, reject) => {
+      const isHttps = window.location.protocol === 'https:';
       this.socket = window.io('/', {
         auth: { token },
         transports: ['websocket', 'polling'],
+        secure: isHttps,
+        rejectUnauthorized: false,
         reconnection: true,
         reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
@@ -67,6 +70,9 @@ class SocketClient {
           this.emit(SOCKET_EVENTS.JOIN_ROOM, {
             roomId: this.currentRoomId,
             code: this.currentRoomCode
+          });
+          this.emit(SOCKET_EVENTS.RECONNECT, {
+            roomId: this.currentRoomId
           });
         }
 
@@ -94,6 +100,8 @@ class SocketClient {
         SOCKET_EVENTS.ROOM_JOINED,
         SOCKET_EVENTS.ROOM_PLAYER_JOINED,
         SOCKET_EVENTS.ROOM_PLAYER_LEFT,
+        SOCKET_EVENTS.ROOM_PLAYER_RECONNECTED,
+        SOCKET_EVENTS.DISCONNECT_WARNING,
         SOCKET_EVENTS.ROOM_SETTINGS_UPDATED,
         SOCKET_EVENTS.ROOM_STARTED,
         SOCKET_EVENTS.GAME_STATE,
@@ -205,7 +213,16 @@ class SocketClient {
   }
 
   sendGameAction(action, roomId = this.currentRoomId) {
-    this.emit(SOCKET_EVENTS.GAME_ACTION, { roomId, action });
+    if (!action.actionId) {
+      action.actionId = `act_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    }
+    this.emit(SOCKET_EVENTS.GAME_ACTION, { roomId, action, actionId: action.actionId });
+  }
+
+  syncState(roomId = this.currentRoomId) {
+    if (roomId) {
+      this.emit(SOCKET_EVENTS.SYNC_STATE, { roomId });
+    }
   }
 
   sendChatMessage(message, roomId = this.currentRoomId) {

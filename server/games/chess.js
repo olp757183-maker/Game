@@ -42,6 +42,7 @@ export class ChessGame {
     this.endedAt = null;
     this.lastMoveTimestamp = Date.now();
     this.timerInterval = null;
+    this.version = 1;
   }
 
   start() {
@@ -412,6 +413,8 @@ export class ChessGame {
       timestamp: Date.now()
     });
 
+    this.version++;
+
     // Check for checkmate or stalemate
     const opponentMoves = this.getLegalMoves(nextColor);
     if (opponentMoves.length === 0) {
@@ -495,8 +498,10 @@ export class ChessGame {
       roomId: this.roomId,
       gameType: 'chess',
       myPlayerId: playerId,
+      version: this.version,
       board: this.board,
       currentTurn: currentTurnPlayer ? currentTurnPlayer.id : this.currentTurn,
+      currentTurnPlayerId: currentTurnPlayer ? currentTurnPlayer.id : null,
       currentTurnColor: this.currentTurn,
       status: this.status,
       winner: this.winner,

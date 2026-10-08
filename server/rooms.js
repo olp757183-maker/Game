@@ -39,6 +39,8 @@ export class Room {
     this.rematchVotes = new Set();
     this.createdAt = Date.now();
     this.lastActiveAt = Date.now();
+    this.version = 1;
+    this.disconnectTimers = new Map();
 
     // Add initial host player
     this.addPlayer(hostUser, true);
@@ -52,7 +54,17 @@ export class Room {
     return code;
   }
 
+  clearDisconnectTimer(userId) {
+    if (this.disconnectTimers.has(userId)) {
+      clearTimeout(this.disconnectTimers.get(userId));
+      this.disconnectTimers.delete(userId);
+    }
+  }
+
   addPlayer(user, isHost = false) {
+    // Clear any disconnect timer for this user
+    this.clearDisconnectTimer(user.id);
+
     // If user already in room, update connection
     const existing = this.players.find(p => p.id === user.id);
     if (existing) {
@@ -60,6 +72,7 @@ export class Room {
       existing.username = user.username;
       existing.avatar = user.avatar;
       existing.preferences = user.preferences || {};
+      this.version++;
       return existing;
     }
 
@@ -92,6 +105,7 @@ export class Room {
 
     this.players.push(playerObj);
     this.lastActiveAt = Date.now();
+    this.version++;
     return playerObj;
   }
 
@@ -104,22 +118,34 @@ export class Room {
   }
 
   removePlayer(userId) {
+    this.clearDisconnectTimer(userId);
     const idx = this.players.findIndex(p => p.id === userId);
     if (idx === -1) return null;
 
     const removed = this.players[idx];
     this.lastActiveAt = Date.now();
+    this.version++;
 
     if (this.status === ROOM_STATUS.WAITING) {
       this.players.splice(idx, 1);
-      // Reassign seats to stay compact if desired or keep
+      // Reassign host if host left
       if (removed.isHost && this.players.length > 0) {
-        this.transferHost(this.players[0].id);
+        const nextHost = this.players.find(p => p.connected) || this.players[0];
+        if (nextHost) {
+          this.transferHost(nextHost.id);
+        }
       }
     } else {
       // In-game leave: mark disconnected
       removed.connected = false;
-      // If all players disconnected or only 1 left in 2-player game, handle forfeiture
+      // Reassign host if host left during active game
+      if (removed.isHost) {
+        const nextHost = this.players.find(p => p.connected && p.id !== userId);
+        if (nextHost) {
+          this.transferHost(nextHost.id);
+        }
+      }
+      // If all players disconnected, handle closure
       const connectedCount = this.players.filter(p => p.connected).length;
       if (connectedCount === 0) {
         this.status = ROOM_STATUS.CLOSED;
@@ -130,10 +156,14 @@ export class Room {
   }
 
   markPlayerConnected(userId, connected = true) {
+    if (connected) {
+      this.clearDisconnectTimer(userId);
+    }
     const player = this.players.find(p => p.id === userId);
     if (player) {
       player.connected = connected;
       this.lastActiveAt = Date.now();
+      this.version++;
     }
     return player;
   }
@@ -146,6 +176,7 @@ export class Room {
 
     this.players.forEach(p => { p.isHost = (p.id === newHostId); });
     this.hostId = newHostId;
+    this.version++;
     database.updateRoomHost(this.id, newHostId);
     return target;
   }
@@ -163,6 +194,7 @@ export class Room {
     }
 
     const kicked = this.players.splice(idx, 1)[0];
+    this.version++;
     if (this.gameInstance && typeof this.gameInstance.handlePlayerLeft === 'function') {
       this.gameInstance.handlePlayerLeft(targetUserId);
     }
@@ -198,6 +230,7 @@ export class Room {
       this.settings = { ...this.settings, ...newSettings };
     }
 
+    this.version++;
     database.saveRoom(this);
     return this.getPublicRoomInfo();
   }
@@ -219,6 +252,7 @@ export class Room {
     });
 
     this.rematchVotes.clear();
+    this.version++;
     this.gameInstance.start();
     database.updateRoomStatus(this.id, this.status);
     return this.gameInstance;
@@ -231,6 +265,7 @@ export class Room {
     this.status = ROOM_STATUS.WAITING;
     this.gameInstance = null;
     this.rematchVotes.clear();
+    this.version++;
     return this.startGame(requesterId, GameEngineClass);
   }
 
@@ -239,6 +274,7 @@ export class Room {
     if (!player) throw new Error('Player not in room');
 
     this.rematchVotes.add(userId);
+    this.version++;
     const activePlayers = this.players.filter(p => p.connected);
     const totalNeeded = Math.max(this.minPlayers, activePlayers.length);
     const isReady = this.rematchVotes.size >= totalNeeded;
@@ -258,6 +294,7 @@ export class Room {
       players: this.players,
       rules: this.rules
     });
+    this.version++;
     this.gameInstance.start();
     database.updateRoomStatus(this.id, this.status);
     return this.gameInstance;
@@ -276,6 +313,7 @@ export class Room {
       maxPlayers: this.maxPlayers,
       minPlayers: this.minPlayers,
       playerCount: this.players.length,
+      version: this.version,
       players: this.players.map(p => ({
         id: p.id,
         username: p.username,
@@ -307,7 +345,9 @@ export class Room {
       room: publicRoom,
       game: gameState,
       myPlayerId: userId,
-      isHost: (this.hostId === userId)
+      isHost: (this.hostId === userId),
+      version: this.version,
+      gameStateVersion: this.gameInstance ? (this.gameInstance.version || 1) : 0
     };
   }
 }

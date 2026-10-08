@@ -19,6 +19,7 @@ export class BalootClient {
   update(gameState) {
     const prevTurn = this.state?.currentTurnPlayerId;
     this.state = gameState;
+    this.actionInFlight = false;
 
     const myId = this.state.myPlayerId;
     if (this.state.currentTurnPlayerId === myId && prevTurn !== myId) {
@@ -49,6 +50,7 @@ export class BalootClient {
     // Hand card selection & play
     this.container.querySelectorAll('.player-hand .playing-card').forEach(el => {
       el.addEventListener('click', () => {
+        if (this.actionInFlight) return;
         const cardId = el.getAttribute('data-id');
         const card = this.state.myHand.find(c => c.id === cardId);
         if (!card) return;
@@ -73,7 +75,7 @@ export class BalootClient {
     const playBtn = this.container.querySelector('#baloot-play-btn');
     if (playBtn) {
       playBtn.addEventListener('click', () => {
-        if (!isMyTurn || !this.selectedCardId || this.state.status !== 'PLAYING') return;
+        if (!isMyTurn || !this.selectedCardId || this.state.status !== 'PLAYING' || this.actionInFlight) return;
         this.playCard(this.selectedCardId);
         this.selectedCardId = null;
       });
@@ -82,6 +84,7 @@ export class BalootClient {
     // Bidding actions
     this.container.querySelectorAll('.bid-btn').forEach(btn => {
       btn.addEventListener('click', () => {
+        if (!isMyTurn || this.actionInFlight) return;
         const bid = btn.getAttribute('data-bid');
         if (bid === 'hokom' && this.state.biddingRound === 2) {
           // Open trump suit modal for round 2
@@ -91,17 +94,22 @@ export class BalootClient {
           return;
         }
 
+        this.actionInFlight = true;
         sfx.click();
-        socket.sendGameAction({ type: 'BID', bid }, this.roomId);
+        const actionId = `baloot_bid_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        socket.sendGameAction({ type: 'BID', bid, actionId }, this.roomId);
       });
     });
 
     // Round 2 Hokom suit selection
     this.container.querySelectorAll('.baloot-trump-choice').forEach(btn => {
       btn.addEventListener('click', () => {
+        if (this.actionInFlight) return;
+        this.actionInFlight = true;
         const trumpSuit = btn.getAttribute('data-suit');
         sfx.click();
-        socket.sendGameAction({ type: 'BID', bid: 'hokom', trumpSuit }, this.roomId);
+        const actionId = `baloot_hokom_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        socket.sendGameAction({ type: 'BID', bid: 'hokom', trumpSuit, actionId }, this.roomId);
         this.pendingRoundTwoHokom = false;
         const modal = this.container.querySelector('#baloot-suit-modal');
         if (modal) modal.classList.remove('active');
@@ -110,8 +118,11 @@ export class BalootClient {
   }
 
   playCard(cardId) {
+    if (this.actionInFlight) return;
+    this.actionInFlight = true;
     sfx.playCard();
-    socket.sendGameAction({ type: 'PLAY_CARD', cardId }, this.roomId);
+    const actionId = `baloot_play_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    socket.sendGameAction({ type: 'PLAY_CARD', cardId, actionId }, this.roomId);
   }
 }
 

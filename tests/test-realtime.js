@@ -173,6 +173,7 @@ async function runRealtimeTests() {
   console.log('\n========================================');
   console.log(' ALL 6 REAL-TIME MULTIPLAYER TESTS PASSED!');
   console.log('========================================\n');
+  process.exit(0);
 }
 
 runRealtimeTests().catch(err => {

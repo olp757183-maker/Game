@@ -63,14 +63,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('[Room] HTTP initial fetch:', err.message);
   }
 
+  // Version tracking to enforce in-order packet processing
+  let latestRoomVersion = 0;
+  let latestGameVersion = 0;
+
   // Setup Socket Events before connecting
   socket.on(SOCKET_EVENTS.ROOM_STATE, (data) => {
     handleRoomState(data);
   });
 
+  socket.on(SOCKET_EVENTS.GAME_STATE, (gameData) => {
+    if (currentRoomData && currentGameClient) {
+      const user = api.getUser() || {};
+      gameData.myPlayerId = gameData.myPlayerId || user.id;
+      currentGameClient.update(gameData);
+    }
+  });
+
   socket.on('room:public-state', (data) => {
     if (data && data.room) {
-      handleRoomState({ room: data.room, game: data.game });
+      // Keep existing active game if public event has null game
+      const existingGame = currentRoomData?.game;
+      handleRoomState({ room: data.room, game: data.game || existingGame });
     }
   });
 
@@ -90,9 +104,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     showToast(i18n.getLanguage() === 'ar' ? `انضم ${data.username} إلى الغرفة` : `${data.username} joined the room`, 'info');
   });
 
+  socket.on(SOCKET_EVENTS.ROOM_PLAYER_RECONNECTED, (data) => {
+    console.log('[Room] Player reconnected:', data);
+    sfx.click();
+    showToast(i18n.getLanguage() === 'ar' ? `عائد ${data.username} للاتصال` : `${data.username} reconnected`, 'info');
+    socket.syncState(roomId || roomCode);
+  });
+
+  socket.on(SOCKET_EVENTS.DISCONNECT_WARNING, (data) => {
+    console.log('[Room] Player disconnect warning:', data);
+    showToast(i18n.getLanguage() === 'ar'
+      ? `انقطع اتصال ${data.username}، في انتظار عودته (${data.timeoutSeconds} ثانية)`
+      : `${data.username} disconnected (${data.timeoutSeconds}s grace period)`, 'warning');
+  });
+
   socket.on(SOCKET_EVENTS.ROOM_PLAYER_LEFT, (data) => {
     console.log('[Room] Player left:', data);
-    showToast(i18n.getLanguage() === 'ar' ? `غادر ${data.username} الغرفة` : `${data.username} left the room`, 'warning');
+    const msg = data.timedOut
+      ? (i18n.getLanguage() === 'ar' ? `تم استبعاد ${data.username} لانتهاء مهلة الاتصال` : `${data.username} timed out`)
+      : (i18n.getLanguage() === 'ar' ? `غادر ${data.username} الغرفة` : `${data.username} left the room`);
+    showToast(msg, 'warning');
   });
 
   socket.on(SOCKET_EVENTS.ROOM_SETTINGS_UPDATED, (data) => {
@@ -119,6 +150,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   socket.on(SOCKET_EVENTS.CHAT_BROADCAST, (chatObj) => {
     appendChatMessage(chatObj);
+  });
+
+  socket.on('connect', () => {
+    console.log('[Room] Socket reconnected, syncing state...');
+    if (roomId || roomCode) {
+      socket.syncState(roomId || roomCode);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.warn('[Room] Socket disconnected, waiting for reconnection...');
   });
 
   socket.on('room:error', (err) => {
@@ -154,8 +196,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function handleRoomState(data) {
-  const { room, game, isHost: serverIsHost, myPlayerId } = data;
+  const { room, game, isHost: serverIsHost, myPlayerId, version, gameStateVersion } = data;
   if (!room) return;
+
+  if (version !== undefined && latestRoomVersion > 0 && version < latestRoomVersion) {
+    console.log(`[Room] Stale packet ignored: rev=${version} current=${latestRoomVersion}`);
+    return;
+  }
+  if (version) latestRoomVersion = version;
+  if (gameStateVersion) latestGameVersion = gameStateVersion;
+
   currentRoomData = room;
 
   if (window.DEBUG_GAME) {
@@ -258,10 +308,11 @@ function renderWaitingLobby(stage, room, isHost) {
     const player = uniquePlayers[i];
     if (player) {
       slots.push(`
-        <div class="waiting-player-slot occupied">
+        <div class="waiting-player-slot occupied ${player.connected ? '' : 'slot-disconnected'}">
           <div class="avatar-badge ${player.avatar || 'avatar1'}"></div>
           <span class="user-name">${escapeHtml(player.username)}</span>
           ${player.isHost ? '<span class="badge badge-info" data-i18n="hostBadge">Host</span>' : ''}
+          ${!player.connected ? '<span class="badge badge-warning" style="font-size: 0.7rem; margin-inline-start: 4px;">قطع الاتصال</span>' : ''}
         </div>
       `);
     } else {

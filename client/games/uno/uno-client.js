@@ -14,11 +14,13 @@ export class UnoClient {
     this.state = null;
     this.selectedCardId = null;
     this.selectedWildCardId = null;
+    this.actionInFlight = false;
   }
 
   update(gameState) {
     const previousTurn = this.state?.currentTurnPlayerId;
     this.state = gameState;
+    this.actionInFlight = false;
 
     const myId = this.state.myPlayerId;
     if (gameState.currentTurnPlayerId === myId && previousTurn !== myId) {
@@ -119,7 +121,8 @@ export class UnoClient {
     const unoBtn = this.container.querySelector('#uno-call-btn');
     if (unoBtn) {
       unoBtn.addEventListener('click', () => {
-        socket.sendGameAction({ type: 'CALL_UNO' }, this.roomId);
+        const actionId = `uno_call_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        socket.sendGameAction({ type: 'CALL_UNO', actionId }, this.roomId);
         sfx.winFanfare();
         showToast('📢 UNO Called!', 'success');
       });
@@ -130,12 +133,14 @@ export class UnoClient {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const targetId = btn.getAttribute('data-target');
-        socket.sendGameAction({ type: 'CATCH_UNO', targetId }, this.roomId);
+        const actionId = `uno_catch_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        socket.sendGameAction({ type: 'CATCH_UNO', targetId, actionId }, this.roomId);
       });
     });
   }
 
   handleCardPlay(card) {
+    if (this.actionInFlight) return;
     if (card.color === 'wild') {
       this.selectedWildCardId = card.id;
       const modal = this.container.querySelector('#wild-color-modal');
@@ -147,23 +152,33 @@ export class UnoClient {
   }
 
   playCard(cardId, chosenColor = null) {
+    if (this.actionInFlight) return;
+    this.actionInFlight = true;
     sfx.playCard();
+    const actionId = `uno_play_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     socket.sendGameAction({
       type: 'PLAY_CARD',
       cardId,
       chosenColor,
-      callUno: false
+      callUno: false,
+      actionId
     }, this.roomId);
   }
 
   drawCard() {
+    if (this.actionInFlight) return;
+    this.actionInFlight = true;
     sfx.drawCard();
-    socket.sendGameAction({ type: 'DRAW_CARD' }, this.roomId);
+    const actionId = `uno_draw_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    socket.sendGameAction({ type: 'DRAW_CARD', actionId }, this.roomId);
   }
 
   passTurn() {
+    if (this.actionInFlight) return;
+    this.actionInFlight = true;
     sfx.click();
-    socket.sendGameAction({ type: 'PASS_TURN' }, this.roomId);
+    const actionId = `uno_pass_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    socket.sendGameAction({ type: 'PASS_TURN', actionId }, this.roomId);
   }
 }
 

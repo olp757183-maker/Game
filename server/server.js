@@ -12,7 +12,7 @@ import auth from './auth.js';
 import users from './users.js';
 import rooms from './rooms.js';
 import database from './database.js';
-import { setupSocketServer, broadcastLobbyRoomCreated } from './socket.js';
+import { setupSocketServer, broadcastLobbyRoomCreated, broadcastLobbyRoomUpdated, broadcastRoomState } from './socket.js';
 import { GAME_INFO, GAME_TYPES } from '../shared/constants.js';
 import { validateUsername, validateEmail, validatePassword, validateRoomCode, validateGameType } from '../shared/validation.js';
 
@@ -29,8 +29,18 @@ const server = http.createServer(app);
 const io = setupSocketServer(server);
 
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    if (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== '*') {
+      const allowed = process.env.CORS_ORIGIN.split(',').map(s => s.trim());
+      if (allowed.includes(origin)) return callback(null, true);
+      return callback(null, false);
+    }
+    // Allow any origin reflecting it back for credentials support
+    return callback(null, true);
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true
 };
 
@@ -189,6 +199,8 @@ app.post('/api/rooms/:idOrCode/join', auth.middleware, (req, res) => {
 
   try {
     const player = room.addPlayer(req.user);
+    broadcastRoomState(room);
+    broadcastLobbyRoomUpdated(room);
     res.json({ success: true, room: room.getPublicRoomInfo(), player });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -207,22 +219,7 @@ app.get('*', (req, res) => {
 // Start Server
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Classic Games Server] Running on port ${PORT}`);
+  console.log(`[Classic Games Server] Running on 0.0.0.0:${PORT}`);
 });
-
-// Backup port listener in case Railway routes to 8080 or 3000
-const ALT_PORT = PORT === 8080 ? 3000 : 8080;
-try {
-  const altServer = http.createServer(app);
-  altServer.on('error', () => {
-    // Port might be in use or restricted, fail gracefully
-  });
-  altServer.listen(ALT_PORT, '0.0.0.0', () => {
-    console.log(`[Classic Games Server] Also listening on fallback port ${ALT_PORT}`);
-    try {
-      io.attach(altServer);
-    } catch (e) {}
-  });
-} catch (e) {}
 
 export { app, server };

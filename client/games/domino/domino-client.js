@@ -19,6 +19,7 @@ export class DominoClient {
   update(gameState) {
     const prevTurn = this.state?.currentTurnPlayerId;
     this.state = gameState;
+    this.actionInFlight = false;
 
     const myId = this.state.myPlayerId;
     if (this.state.currentTurnPlayerId === myId && prevTurn !== myId) {
@@ -49,7 +50,7 @@ export class DominoClient {
     // Hand tiles click
     this.container.querySelectorAll('.player-hand .domino-tile').forEach(el => {
       el.addEventListener('click', () => {
-        if (!isMyTurn) return;
+        if (!isMyTurn || this.actionInFlight) return;
         const tileId = el.getAttribute('data-id');
         const tile = this.state.myHand?.find(t => t.id === tileId);
         if (!tile) return;
@@ -86,9 +87,11 @@ export class DominoClient {
     const drawBtn = this.container.querySelector('#domino-draw-btn');
     if (drawBtn) {
       drawBtn.addEventListener('click', () => {
-        if (isMyTurn) {
+        if (isMyTurn && !this.actionInFlight) {
+          this.actionInFlight = true;
           sfx.drawCard();
-          socket.sendGameAction({ type: 'DRAW_TILE' }, this.roomId);
+          const actionId = `domino_draw_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+          socket.sendGameAction({ type: 'DRAW_TILE', actionId }, this.roomId);
         }
       });
     }
@@ -97,20 +100,26 @@ export class DominoClient {
     const passBtn = this.container.querySelector('#domino-pass-btn');
     if (passBtn) {
       passBtn.addEventListener('click', () => {
-        if (isMyTurn) {
+        if (isMyTurn && !this.actionInFlight) {
+          this.actionInFlight = true;
           sfx.click();
-          socket.sendGameAction({ type: 'PASS' }, this.roomId);
+          const actionId = `domino_pass_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+          socket.sendGameAction({ type: 'PASS', actionId }, this.roomId);
         }
       });
     }
   }
 
   playTile(tileId, side) {
+    if (this.actionInFlight) return;
+    this.actionInFlight = true;
     sfx.playCard();
+    const actionId = `domino_play_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     socket.sendGameAction({
       type: 'PLAY_TILE',
       tileId,
-      side
+      side,
+      actionId
     }, this.roomId);
     this.selectedTileId = null;
   }

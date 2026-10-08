@@ -34,6 +34,7 @@ export class DominoGame {
     this.scores = {};
     this.startedAt = Date.now();
     this.endedAt = null;
+    this.version = 1;
 
     this.players.forEach(p => {
       this.scores[p.id] = 0;
@@ -147,19 +148,26 @@ export class DominoGame {
       throw new Error('ليست هذه حركتك');
     }
 
+    let res;
     switch (action.type) {
       case 'PLAY_TILE':
-        return this.executePlay(current, action.tileId, action.side);
+        res = this.executePlay(current, action.tileId, action.side);
+        break;
 
       case 'DRAW_TILE':
-        return this.executeDraw(current);
+        res = this.executeDraw(current);
+        break;
 
       case 'PASS':
-        return this.executePass(current);
+        res = this.executePass(current);
+        break;
 
       default:
         throw new Error(`حركة غير معروفة: ${action.type}`);
     }
+
+    this.version++;
+    return res;
   }
 
   executePlay(player, tileId, requestedSide = 'right') {
@@ -350,6 +358,7 @@ export class DominoGame {
       roomId: this.roomId,
       gameType: 'domino',
       myPlayerId: playerId,
+      version: this.version,
       status: this.status,
       round: this.roundNumber,
       roundNumber: this.roundNumber,

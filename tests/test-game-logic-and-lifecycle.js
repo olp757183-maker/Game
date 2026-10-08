@@ -431,6 +431,7 @@ async function runAllTests() {
   console.log('\n======================================================');
   console.log(` ALL ENGINE & LIFECYCLE TESTS PASSED! (${passedTests}/${totalTests}) 🚀`);
   console.log('======================================================\n');
+  process.exit(0);
 }
 
 runAllTests().catch(err => {

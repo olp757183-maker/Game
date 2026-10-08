@@ -19,8 +19,14 @@ export class ChessClient {
   update(gameState) {
     const prevTurn = this.state?.currentTurn;
     this.state = gameState;
+    this.actionInFlight = false;
 
-    if (this.state.myColor === this.state.currentTurn && prevTurn !== this.state.currentTurn) {
+    const isMyTurn = (this.state.myPlayerId === this.state.currentTurn) ||
+                     (this.state.myPlayerId === this.state.currentTurnPlayerId) ||
+                     (this.state.myColor === this.state.currentTurnColor) ||
+                     (this.state.myColor === this.state.currentTurn);
+
+    if (isMyTurn && prevTurn !== this.state.currentTurn) {
       sfx.turnAlert();
     }
 
@@ -81,7 +87,11 @@ export class ChessClient {
   }
 
   handleSquareClick(r, c) {
-    if (this.state.myColor !== this.state.currentTurn) return;
+    const isMyTurn = (this.state.myPlayerId === this.state.currentTurn) ||
+                     (this.state.myPlayerId === this.state.currentTurnPlayerId) ||
+                     (this.state.myColor === this.state.currentTurnColor) ||
+                     (this.state.myColor === this.state.currentTurn);
+    if (!isMyTurn || this.actionInFlight) return;
 
     const piece = this.state.board[r]?.[c];
 
@@ -131,12 +141,16 @@ export class ChessClient {
   }
 
   executeMove(from, to, promotion = 'q') {
+    if (this.actionInFlight) return;
+    this.actionInFlight = true;
     sfx.playCard();
+    const actionId = `chess_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     socket.sendGameAction({
       type: 'MOVE',
       from,
       to,
-      promotion
+      promotion,
+      actionId
     }, this.roomId);
   }
 }

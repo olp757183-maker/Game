@@ -40,6 +40,7 @@ export class CardsGame {
     this.scores = {};
     this.startedAt = Date.now();
     this.endedAt = null;
+    this.version = 1;
 
     this.players.forEach(p => {
       this.scores[p.id] = 0;
@@ -171,19 +172,26 @@ export class CardsGame {
       throw new Error('ليست هذه حركتك');
     }
 
+    let res;
     switch (action.type) {
       case 'PLAY_CARD':
-        return this.executePlay(current, action.cardId, action.chosenSuit);
+        res = this.executePlay(current, action.cardId, action.chosenSuit);
+        break;
 
       case 'DRAW_CARD':
-        return this.executeDraw(current);
+        res = this.executeDraw(current);
+        break;
 
       case 'PASS_TURN':
-        return this.executePass(current);
+        res = this.executePass(current);
+        break;
 
       default:
         throw new Error(`حركة غير معروفة: ${action.type}`);
     }
+
+    this.version++;
+    return res;
   }
 
   executePlay(player, cardId, chosenSuit) {
@@ -325,6 +333,7 @@ export class CardsGame {
       roomId: this.roomId,
       gameType: 'cards',
       myPlayerId: playerId,
+      version: this.version,
       status: this.status,
       round: this.roundNumber,
       roundNumber: this.roundNumber,

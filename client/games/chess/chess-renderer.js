@@ -19,12 +19,14 @@ export function renderChessSquares(state, options = {}) {
   const rowIndices = isFlipped ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
   const colIndices = isFlipped ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
 
+  const turnColor = state.currentTurnColor || (state.currentTurn === 'w' || state.currentTurn === 'b' ? state.currentTurn : (state.players?.find(p => p.id === state.currentTurn)?.color) || 'w');
+
   for (const r of rowIndices) {
     for (const c of colIndices) {
       const isDark = (r + c) % 2 === 1;
       const piece = board[r]?.[c];
       const isSelected = selectedSquare && selectedSquare.row === r && selectedSquare.col === c;
-      const isCheckSquare = state.inCheck && piece && piece.type === 'k' && piece.color === state.currentTurn;
+      const isCheckSquare = state.inCheck && piece && piece.type === 'k' && piece.color === turnColor;
 
       let pieceHtml = '';
       if (piece) {
@@ -57,7 +59,8 @@ export function renderChess(state, options = {}) {
 
   const myColor = state.myColor;
   const isFlipped = (myColor === 'b');
-  const isMyTurn = (myColor === state.currentTurn);
+  const turnColor = state.currentTurnColor || (state.currentTurn === 'w' || state.currentTurn === 'b' ? state.currentTurn : (state.players?.find(p => p.id === state.currentTurn)?.color) || 'w');
+  const isMyTurn = (state.myPlayerId === state.currentTurn) || (state.myPlayerId === state.currentTurnPlayerId) || (myColor === turnColor);
   const selectedSquare = options.selectedSquare || null;
 
   const whitePlayer = state.players.find(p => p.color === 'w') || { username: 'White', timeLeft: 300 };
@@ -69,7 +72,7 @@ export function renderChess(state, options = {}) {
   return `
     <div class="game-container chess-game-container">
       <!-- Top Opponent Strip -->
-      <div class="game-header chess-player-strip ${topPlayer.color === state.currentTurn ? 'active-clock' : ''}">
+      <div class="game-header chess-player-strip ${topPlayer.color === turnColor ? 'active-clock' : ''}">
         <div class="player-info-wrap">
           <div class="avatar-badge ${topPlayer.avatar || 'avatar1'}"></div>
           <div>
@@ -92,7 +95,7 @@ export function renderChess(state, options = {}) {
       </div>
 
       <!-- Bottom Player Strip -->
-      <div class="player-area chess-player-strip ${bottomPlayer.color === state.currentTurn ? 'active-clock' : ''}">
+      <div class="player-area chess-player-strip ${bottomPlayer.color === turnColor ? 'active-clock' : ''}">
         <div class="player-info-wrap">
           <div class="avatar-badge ${bottomPlayer.avatar || 'avatar1'}"></div>
           <div>

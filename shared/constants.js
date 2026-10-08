@@ -99,11 +99,14 @@ export const SOCKET_EVENTS = {
   VOTE_REMATCH: 'game:vote_rematch',
   NEXT_ROUND: 'game:next_round',
   RECONNECT: 'user:reconnect',
+  SYNC_STATE: 'game:sync_state',
 
   // Server -> Client
   ROOM_JOINED: 'room:joined',
   ROOM_PLAYER_JOINED: 'room:player-joined',
   ROOM_PLAYER_LEFT: 'room:player-left',
+  ROOM_PLAYER_RECONNECTED: 'room:player-reconnected',
+  DISCONNECT_WARNING: 'room:disconnect-warning',
   ROOM_SETTINGS_UPDATED: 'room:settings-updated',
   ROOM_STARTED: 'room:started',
   ROOM_STATE: 'room:state',

@@ -43,6 +43,7 @@ export class UnoGame {
     this.endedAt = null;
     this.turnTimer = null;
     this.turnDeadline = 0;
+    this.version = 1;
 
     this.players.forEach(p => {
       this.scores[p.id] = 0;
@@ -176,7 +177,7 @@ export class UnoGame {
   resetTurnTimer() {
     if (this.turnTimer) clearTimeout(this.turnTimer);
     const seconds = this.rules.turnTimer || 0;
-    if (seconds > 0 && this.status === 'IN_PROGRESS') {
+    if (seconds > 0 && this.status === GAME_STATUS.PLAYING) {
       this.turnDeadline = Date.now() + seconds * 1000;
       this.turnTimer = setTimeout(() => {
         this.handleTurnTimeout();
@@ -187,7 +188,7 @@ export class UnoGame {
   }
 
   handleTurnTimeout() {
-    if (this.status !== 'IN_PROGRESS') return;
+    if (this.status !== GAME_STATUS.PLAYING) return;
     const current = this.getCurrentPlayer();
     if (!current) return;
 
@@ -239,25 +240,34 @@ export class UnoGame {
       throw new Error('Game is not in progress');
     }
 
+    let res;
     switch (action.type) {
       case 'PLAY_CARD':
-        return this.executePlay(playerId, action.cardId, action.chosenColor, action.callUno);
+        res = this.executePlay(playerId, action.cardId, action.chosenColor, action.callUno);
+        break;
 
       case 'DRAW_CARD':
-        return this.executeDraw(playerId);
+        res = this.executeDraw(playerId);
+        break;
 
       case 'PASS_TURN':
-        return this.executePass(playerId);
+        res = this.executePass(playerId);
+        break;
 
       case 'CALL_UNO':
-        return this.executeCallUno(playerId);
+        res = this.executeCallUno(playerId);
+        break;
 
       case 'CATCH_UNO':
-        return this.executeCatchUno(playerId, action.targetId);
+        res = this.executeCatchUno(playerId, action.targetId);
+        break;
 
       default:
         throw new Error(`Unknown UNO action: ${action.type}`);
     }
+
+    this.version++;
+    return res;
   }
 
   executePlay(playerId, cardId, chosenColor, callUno = false) {
@@ -548,6 +558,7 @@ export class UnoGame {
       roomId: this.roomId,
       gameType: 'uno',
       myPlayerId: playerId,
+      version: this.version,
       status: this.status,
       round: this.roundNumber,
       roundNumber: this.roundNumber,

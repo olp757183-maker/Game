@@ -31,6 +31,17 @@ const userSockets = new Map();
 // Map of socketId -> currentRoomId
 const socketRoomMap = new Map();
 
+// Map of actionId -> timestamp for idempotent deduplication
+const processedActions = new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, ts] of processedActions.entries()) {
+    if (now - ts > 60000) {
+      processedActions.delete(key);
+    }
+  }
+}, 30000);
+
 // Global io instance reference
 let ioInstance = null;
 
@@ -190,6 +201,8 @@ export function setupSocketServer(httpServer) {
 
         // Add or re-activate player in room
         const isHost = (room.hostId === user.id);
+        const wasExisting = Boolean(existingPlayer);
+        const wasDisconnected = existingPlayer && !existingPlayer.connected;
         const player = room.addPlayer(user, isHost);
 
         // Associate socket with unified Socket.IO room channel
@@ -201,22 +214,30 @@ export function setupSocketServer(httpServer) {
         socket.emit(SOCKET_EVENTS.ROOM_JOINED, {
           roomId: room.id,
           roomCode: room.code,
-          player
+          player,
+          isReconnect: wasExisting
         });
 
         // Notify other room members
-        socket.to(channel).emit(SOCKET_EVENTS.ROOM_PLAYER_JOINED, {
-          player,
-          username: user.username
-        });
+        if (wasDisconnected) {
+          socket.to(channel).emit(SOCKET_EVENTS.ROOM_PLAYER_RECONNECTED, {
+            playerId: user.id,
+            username: user.username
+          });
+        } else if (!wasExisting) {
+          socket.to(channel).emit(SOCKET_EVENTS.ROOM_PLAYER_JOINED, {
+            player,
+            username: user.username
+          });
 
-        io.to(channel).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
-          id: `sys_${Date.now()}_${Math.random()}`,
-          isSystem: true,
-          messageEn: `${user.username} joined the room`,
-          messageAr: `انضم ${user.username} إلى الغرفة`,
-          timestamp: Date.now()
-        });
+          io.to(channel).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
+            id: `sys_${Date.now()}_${Math.random()}`,
+            isSystem: true,
+            messageEn: `${user.username} joined the room`,
+            messageAr: `انضم ${user.username} إلى الغرفة`,
+            timestamp: Date.now()
+          });
+        }
 
         // Broadcast updated room state to all players
         broadcastRoomState(room);
@@ -449,14 +470,37 @@ export function setupSocketServer(httpServer) {
     });
 
     // Game Action (Server Authoritative)
-    socket.on(SOCKET_EVENTS.GAME_ACTION, ({ roomId, action }) => {
+    socket.on(SOCKET_EVENTS.GAME_ACTION, ({ roomId, action, actionId }) => {
       try {
-        console.log(`[GAME ACTION] user=${user.username} roomId=${roomId} action=${action?.type}`);
+        const effActionId = actionId || action?.actionId;
+        if (effActionId) {
+          const dupKey = `${roomId}:${effActionId}`;
+          if (processedActions.has(dupKey)) {
+            console.log(`[GAME ACTION DUPLICATE IGNORED] key=${dupKey} user=${user.username}`);
+            const r = rooms.getRoomById(roomId);
+            if (r) {
+              socket.emit(SOCKET_EVENTS.ROOM_STATE, r.getStateForPlayer(user.id));
+              if (r.gameInstance) {
+                socket.emit(SOCKET_EVENTS.GAME_STATE, r.gameInstance.getStateForPlayer(user.id));
+              }
+            }
+            return;
+          }
+          processedActions.set(dupKey, Date.now());
+        }
+
+        console.log(`[GAME ACTION] user=${user.username} roomId=${roomId} action=${action?.type} id=${effActionId}`);
         const room = rooms.getRoomById(roomId);
         if (!room) throw new Error('Room not found');
         if (!room.gameInstance) throw new Error('No game is currently active');
 
         const result = room.gameInstance.handleAction(user.id, action);
+
+        // Increment version
+        if (room.gameInstance) {
+          room.gameInstance.version = (room.gameInstance.version || 0) + 1;
+        }
+        room.version++;
 
         // Check if match ended and record stats & match result
         const game = room.gameInstance;
@@ -497,6 +541,25 @@ export function setupSocketServer(httpServer) {
           messageEn: err.message || 'Illegal move',
           messageAr: err.message || 'حركة غير قانونية'
         });
+      }
+    });
+
+    // Sync Game State on demand
+    socket.on(SOCKET_EVENTS.SYNC_STATE, ({ roomId }) => {
+      try {
+        const targetRoomId = roomId || socketRoomMap.get(socket.id);
+        if (!targetRoomId) return;
+        const room = rooms.getRoomById(targetRoomId);
+        if (room) {
+          console.log(`[SYNC STATE REQUEST] user=${user.username} roomId=${room.id} rev=${room.version}`);
+          const pState = room.getStateForPlayer(user.id);
+          socket.emit(SOCKET_EVENTS.ROOM_STATE, pState);
+          if (pState.game) {
+            socket.emit(SOCKET_EVENTS.GAME_STATE, pState.game);
+          }
+        }
+      } catch (err) {
+        console.error('[SYNC ERROR]:', err);
       }
     });
 
@@ -593,12 +656,25 @@ export function setupSocketServer(httpServer) {
       console.log(`[USER RECONNECT] socket=${socket.id} user=${user.username} roomId=${roomId}`);
       const room = rooms.getRoomById(roomId);
       if (room) {
+        room.clearDisconnectTimer(user.id);
         room.markPlayerConnected(user.id, true);
         const channel = `room:${room.id}`;
         socket.join(channel);
         socketRoomMap.set(socket.id, room.id);
-        socket.emit(SOCKET_EVENTS.ROOM_STATE, room.getStateForPlayer(user.id));
+
+        socket.to(channel).emit(SOCKET_EVENTS.ROOM_PLAYER_RECONNECTED, {
+          playerId: user.id,
+          username: user.username
+        });
+
+        const pState = room.getStateForPlayer(user.id);
+        socket.emit(SOCKET_EVENTS.ROOM_STATE, pState);
+        if (pState.game) {
+          socket.emit(SOCKET_EVENTS.GAME_STATE, pState.game);
+        }
+
         broadcastRoomState(room);
+        broadcastLobbyRoomUpdated(room);
       }
     });
 
@@ -622,13 +698,67 @@ export function setupSocketServer(httpServer) {
           if (!userSockets.has(user.id)) {
             room.markPlayerConnected(user.id, false);
             const channel = `room:${room.id}`;
+
             io.to(channel).emit(SOCKET_EVENTS.ROOM_PLAYER_LEFT, {
               playerId: user.id,
               username: user.username,
               disconnected: true
             });
+
             broadcastRoomState(room);
             broadcastLobbyRoomUpdated(room);
+
+            if (room.status === ROOM_STATUS.WAITING) {
+              // Wait 6 seconds before removing player from waiting room
+              room.clearDisconnectTimer(user.id);
+              const timer = setTimeout(() => {
+                room.clearDisconnectTimer(user.id);
+                if (!userSockets.has(user.id) && room.status === ROOM_STATUS.WAITING) {
+                  const removed = room.removePlayer(user.id);
+                  if (removed) {
+                    console.log(`[ROOM TIMEOUT REMOVAL] user=${user.username} room=${room.id}`);
+                    io.to(channel).emit(SOCKET_EVENTS.ROOM_PLAYER_LEFT, {
+                      playerId: user.id,
+                      username: user.username,
+                      timedOut: true
+                    });
+                    if (room.players.length === 0) {
+                      rooms.closeRoom(room.id);
+                      broadcastLobbyRoomRemoved(room.id);
+                    } else {
+                      broadcastRoomState(room);
+                      broadcastLobbyRoomUpdated(room);
+                    }
+                  }
+                }
+              }, 6000);
+              room.disconnectTimers.set(user.id, timer);
+
+            } else if (room.status === ROOM_STATUS.PLAYING) {
+              // Grace period of 45 seconds for in-game reconnection
+              io.to(channel).emit(SOCKET_EVENTS.DISCONNECT_WARNING, {
+                playerId: user.id,
+                username: user.username,
+                timeoutSeconds: 45
+              });
+
+              room.clearDisconnectTimer(user.id);
+              const timer = setTimeout(() => {
+                room.clearDisconnectTimer(user.id);
+                if (!userSockets.has(user.id) && room.status === ROOM_STATUS.PLAYING) {
+                  console.log(`[GAME TIMEOUT FORFEIT] user=${user.username} room=${room.id}`);
+                  if (room.gameInstance && typeof room.gameInstance.handlePlayerLeft === 'function') {
+                    room.gameInstance.handlePlayerLeft(user.id);
+                    if (['GAME_OVER', 'MATCH_END', 'FINISHED'].includes(room.gameInstance.status)) {
+                      room.status = ROOM_STATUS.FINISHED;
+                    }
+                  }
+                  broadcastRoomState(room);
+                  broadcastLobbyRoomUpdated(room);
+                }
+              }, 45000);
+              room.disconnectTimers.set(user.id, timer);
+            }
           }
         }
       }

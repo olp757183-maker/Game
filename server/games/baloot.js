@@ -48,6 +48,7 @@ export class BalootGame {
     this.roundNumber = 1;
     this.startedAt = Date.now();
     this.endedAt = null;
+    this.version = 1;
   }
 
   start() {
@@ -124,13 +125,17 @@ export class BalootGame {
       throw new Error('ليست هذه حركتك');
     }
 
+    let res;
     if (this.status === 'BIDDING') {
-      return this.handleBiddingAction(current, action);
+      res = this.handleBiddingAction(current, action);
     } else if (this.status === 'PLAYING') {
-      return this.handlePlayAction(current, action);
+      res = this.handlePlayAction(current, action);
+    } else {
+      throw new Error('Action cannot be performed right now');
     }
 
-    throw new Error('Action cannot be performed right now');
+    this.version++;
+    return res;
   }
 
   handleBiddingAction(player, action) {
@@ -435,6 +440,7 @@ export class BalootGame {
       roomId: this.roomId,
       gameType: 'baloot',
       myPlayerId: playerId,
+      version: this.version,
       status: this.status,
       round: this.roundNumber,
       roundNumber: this.roundNumber,

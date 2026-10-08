@@ -76,13 +76,13 @@ class UIManager {
     if (modal) {
       modal.classList.remove('active');
     }
-    if (!document.querySelector('.modal.active')) {
+    if (!document.querySelector('.modal-backdrop.active, .wild-modal-backdrop.active')) {
       document.body.classList.remove('modal-open');
     }
   }
 
   closeAllModals() {
-    document.querySelectorAll('.modal.active').forEach(m => m.classList.remove('active'));
+    document.querySelectorAll('.modal-backdrop.active, .wild-modal-backdrop.active').forEach(m => m.classList.remove('active'));
     document.body.classList.remove('modal-open');
   }
 
@@ -163,6 +163,36 @@ class UIManager {
         sfx.click();
       });
       soundBtn.innerHTML = sfx.enabled ? '🔊' : '🔇';
+    }
+
+    // Mobile Hamburger Menu Toggle
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const navLinks = document.getElementById('site-nav-links') || document.querySelector('.nav-links');
+    if (mobileMenuToggle && navLinks) {
+      mobileMenuToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = navLinks.classList.toggle('mobile-nav-open');
+        mobileMenuToggle.textContent = isOpen ? '✕' : '☰';
+        mobileMenuToggle.setAttribute('aria-expanded', isOpen);
+      });
+
+      // Close mobile menu on nav link click
+      navLinks.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', () => {
+          navLinks.classList.remove('mobile-nav-open');
+          mobileMenuToggle.textContent = '☰';
+          mobileMenuToggle.setAttribute('aria-expanded', 'false');
+        });
+      });
+
+      // Close on outside click
+      document.addEventListener('click', (e) => {
+        if (!navLinks.contains(e.target) && !mobileMenuToggle.contains(e.target)) {
+          navLinks.classList.remove('mobile-nav-open');
+          mobileMenuToggle.textContent = '☰';
+          mobileMenuToggle.setAttribute('aria-expanded', 'false');
+        }
+      });
     }
 
     this.setupModals();

@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Game Room — Classic Games</title>
   <link rel="stylesheet" href="/css/main.css">
   <link rel="stylesheet" href="/css/room.css">
@@ -24,7 +24,7 @@
       </div>
 
       <button id="copy-room-link-btn" class="btn btn-sm btn-outline" title="Copy full room link">
-        🔗 مشاركة الرابط
+        🔗 <span class="hide-on-mobile-tiny">مشاركة</span>
       </button>
 
       <div class="room-game-title" id="room-game-title">Loading...</div>
@@ -32,11 +32,14 @@
     </div>
 
     <div class="room-actions-group">
+      <button id="mobile-sidebar-toggle-btn" class="btn btn-sm btn-outline mobile-only-btn" title="Chat & Players">
+        💬 <span class="sidebar-unread-indicator"></span>
+      </button>
       <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme">☀️</button>
       <button id="sound-toggle-btn" class="icon-btn" title="Toggle Sound">🔊</button>
       <button id="lang-toggle-btn" class="btn btn-sm btn-outline">English</button>
       <button id="leave-room-btn" class="btn btn-sm btn-danger" data-i18n="leaveRoomBtn">
-        🚪 مغادرة
+        🚪 <span class="hide-on-mobile-tiny">مغادرة</span>
       </button>
     </div>
   </header>

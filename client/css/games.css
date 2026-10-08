@@ -204,24 +204,25 @@
 .player-hand {
   display: flex;
   align-items: flex-end;
-  justify-content: center;
+  justify-content: safe center;
   overflow-x: auto;
   overflow-y: visible;
-  padding: 1.5rem 1rem 0.5rem 1rem;
+  padding: 1.5rem 0.75rem 0.5rem 0.75rem;
   max-width: 100%;
-  min-height: 135px;
+  min-height: clamp(96px, 19vw, 138px);
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Overlapping Hand Layout */
 .player-hand .playing-card:not(:first-child),
 .player-hand .uno-card:not(:first-child) {
-  margin-inline-start: -20px;
+  margin-inline-start: calc(-1 * clamp(14px, 3.8vw, 24px));
 }
 
 @media (max-width: 600px) {
   .player-hand .playing-card:not(:first-child),
   .player-hand .uno-card:not(:first-child) {
-    margin-inline-start: -32px;
+    margin-inline-start: calc(-1 * clamp(18px, 4.5vw, 28px));
   }
 }
 
@@ -229,11 +230,11 @@
    1. Playing Card Component (HTML + CSS) - Requirements 3, 4, 5, 6
    -------------------------------------------------------------------------- */
 .playing-card {
-  width: clamp(66px, 9.5vw, 84px);
-  height: clamp(98px, 14.5vw, 126px);
+  width: clamp(50px, 11vw, 84px);
+  height: clamp(74px, 16vw, 126px);
   background: #ffffff;
   border: 1.5px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: clamp(6px, 1.5vw, 10px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
   position: relative;
   display: flex;
@@ -437,10 +438,10 @@
    2. UNO Cards Styling - Requirement 7
    -------------------------------------------------------------------------- */
 .uno-card {
-  width: clamp(68px, 10vw, 86px);
-  height: clamp(100px, 15vw, 128px);
-  border-radius: 12px;
-  border: 3.5px solid #ffffff;
+  width: clamp(50px, 11vw, 86px);
+  height: clamp(74px, 16vw, 128px);
+  border-radius: clamp(8px, 2vw, 12px);
+  border: clamp(2px, 0.5vw, 3.5px) solid #ffffff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   position: relative;
   display: flex;
@@ -641,7 +642,7 @@
 
 .baloot-felt-arena {
   width: 100%;
-  min-height: 380px;
+  min-height: clamp(280px, 45vh, 400px);
   background: radial-gradient(circle at center, #065f46 0%, #022c22 85%);
   border: 4px solid #047857;
   border-radius: var(--radius-lg);
@@ -658,13 +659,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
-  background: rgba(11, 15, 25, 0.75);
+  gap: 0.2rem;
+  background: rgba(11, 15, 25, 0.82);
   backdrop-filter: blur(6px);
-  padding: 0.4rem 0.75rem;
+  padding: clamp(0.2rem, 1vw, 0.4rem) clamp(0.35rem, 1.5vw, 0.75rem);
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   z-index: 5;
+  font-size: clamp(0.72rem, 2vw, 0.85rem);
 }
 
 .seat-pos.active-turn {
@@ -672,9 +674,9 @@
   box-shadow: 0 0 16px rgba(245, 158, 11, 0.6);
 }
 
-.seat-pos.seat-top { top: 12px; }
-.seat-pos.seat-left { left: 12px; }
-.seat-pos.seat-right { right: 12px; }
+.seat-pos.seat-top { top: 8px; left: 50%; transform: translateX(-50%); }
+.seat-pos.seat-left { left: 8px; top: 50%; transform: translateY(-50%); }
+.seat-pos.seat-right { right: 8px; top: 50%; transform: translateY(-50%); }
 
 .seat-info {
   display: flex;
@@ -689,8 +691,8 @@
 }
 
 .baloot-center-felt {
-  width: 240px;
-  height: 240px;
+  width: min(200px, 46vw);
+  height: min(200px, 46vw);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -712,8 +714,8 @@
 
 .active-trick-layout {
   position: relative;
-  width: 200px;
-  height: 200px;
+  width: min(180px, 42vw);
+  height: min(180px, 42vw);
 }
 
 .trick-played-card {
@@ -798,8 +800,9 @@
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
-  width: min(480px, 86vw);
-  height: min(480px, 86vw);
+  width: min(500px, 88vw, calc(100dvh - 220px));
+  height: min(500px, 88vw, calc(100dvh - 220px));
+  aspect-ratio: 1 / 1;
   border: 2px solid #475569;
 }
 
@@ -819,7 +822,7 @@
 .square-check { background: #ef4444 !important; }
 
 .chess-piece {
-  font-size: clamp(2rem, 5.5vw, 3.2rem);
+  font-size: clamp(1.2rem, 4.8vw, 2.8rem);
   line-height: 1;
 }
 
@@ -921,8 +924,8 @@
 }
 
 .board-tile {
-  width: 46px;
-  height: 92px;
+  width: clamp(30px, 6vw, 46px);
+  height: clamp(60px, 12vw, 92px);
 }
 
 .board-tile.tile-double {
@@ -931,8 +934,8 @@
 }
 
 .hand-tile {
-  width: 52px;
-  height: 104px;
+  width: clamp(36px, 8vw, 52px);
+  height: clamp(72px, 16vw, 104px);
   cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
 }
@@ -965,8 +968,8 @@
 }
 
 .pips-grid {
-  width: 32px;
-  height: 32px;
+  width: clamp(20px, 4.5vw, 32px);
+  height: clamp(20px, 4.5vw, 32px);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
@@ -976,8 +979,8 @@
 .pip {
   background: #0f172a;
   border-radius: 50%;
-  width: 7px;
-  height: 7px;
+  width: clamp(4px, 1vw, 7px);
+  height: clamp(4px, 1vw, 7px);
   margin: auto;
 }
 

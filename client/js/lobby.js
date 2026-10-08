@@ -8,7 +8,7 @@ import api from './api.js';
 import ui from './ui.js';
 import socket from './socket.js';
 import i18n from './language.js';
-import { showToast, sfx } from './utils.js';
+import { showToast, sfx, escapeHtml } from './utils.js';
 import { getDefaultRules } from '../shared/rules.js';
 import { SOCKET_EVENTS } from '../shared/constants.js';
 
@@ -114,17 +114,17 @@ function renderRoomsTable() {
 
   tbody.innerHTML = filtered.map(room => `
     <tr>
-      <td><span class="room-code-tag">${room.code}</span></td>
-      <td><strong>${room.gameType.toUpperCase()}</strong></td>
-      <td>${room.hostName}</td>
-      <td>${room.players}</td>
-      <td>
+      <td data-label="${i18n.t('roomCodeCol') || 'رمز الغرفة'}"><span class="room-code-tag">${room.code}</span></td>
+      <td data-label="${i18n.t('gameCol') || 'اللعبة'}"><strong>${room.gameType.toUpperCase()}</strong></td>
+      <td data-label="${i18n.t('hostCol') || 'المضيف'}">${escapeHtml(room.hostName)}</td>
+      <td data-label="${i18n.t('playersCol') || 'اللاعبون'}">${room.players}</td>
+      <td data-label="${i18n.t('statusCol') || 'الحالة'}">
         <span class="status-indicator status-${room.status.toLowerCase()}">
           <span class="status-dot"></span>
           ${room.status}
         </span>
       </td>
-      <td>
+      <td data-label="${i18n.t('actionCol') || 'الإجراء'}">
         <button class="btn btn-sm btn-primary join-room-btn" data-code="${room.code}">
           ${i18n.t('joinBtn')}
         </button>

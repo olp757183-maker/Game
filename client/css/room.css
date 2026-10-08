@@ -14,31 +14,60 @@
 .room-header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 0.75rem 1.5rem;
+  padding: 0.5rem 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.5rem 0.75rem;
   flex-wrap: wrap;
 }
 
 .room-meta-group {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.5rem 0.75rem;
+  flex-wrap: wrap;
+}
+
+.hide-on-mobile-tiny {
+  display: inline;
+}
+
+@media (max-width: 400px) {
+  .hide-on-mobile-tiny {
+    display: none;
+  }
+}
+
+.mobile-only-btn {
+  display: none;
+}
+
+.sidebar-unread-indicator {
+  display: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 6px var(--danger);
+  margin-inline-start: 4px;
+}
+
+.sidebar-unread-indicator.has-unread {
+  display: inline-block;
 }
 
 .room-code-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   background: rgba(6, 182, 212, 0.12);
   border: 1px solid rgba(6, 182, 212, 0.3);
-  padding: 0.35rem 0.75rem;
+  padding: 0.25rem 0.6rem;
   border-radius: var(--radius-md);
   font-family: monospace;
   font-weight: 800;
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: var(--accent);
   cursor: pointer;
 }
@@ -48,14 +77,15 @@
 }
 
 .room-game-title {
-  font-size: 1.15rem;
+  font-size: clamp(0.95rem, 2.5vw, 1.15rem);
   font-weight: 800;
 }
 
 .room-actions-group {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.4rem 0.6rem;
+  flex-wrap: wrap;
 }
 
 /* Main Arena Grid */
@@ -77,23 +107,84 @@
   overflow-y: auto;
   min-height: 0;
   flex: 1;
-  padding: 0.75rem 1rem;
+  padding: 0.6rem 0.85rem;
 }
 
 @media (max-width: 900px) {
+  .mobile-only-btn {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .room-header {
+    padding: 0.4rem 0.75rem;
+    gap: 0.35rem 0.5rem;
+  }
+
   .room-main-content {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
     height: auto;
-    min-height: calc(100vh - 65px);
+    min-height: calc(100dvh - 60px);
     overflow: visible;
   }
+
   .room-game-stage {
-    min-height: 560px;
-    padding: 0.5rem;
+    min-height: 480px;
+    padding: 0.4rem;
+    width: 100%;
   }
+
   .room-sidebar {
+    display: none;
     height: 380px;
+    width: 100%;
     border-top: 1px solid var(--border);
+    border-left: none;
+    border-right: none;
+  }
+
+  .room-sidebar.mobile-open {
+    display: flex;
+  }
+}
+
+/* Landscape Mode on Phones / Small Tablets */
+@media (max-height: 520px) and (orientation: landscape) {
+  .room-header {
+    padding: 0.25rem 0.75rem;
+    gap: 0.35rem;
+    min-height: 44px;
+  }
+
+  .room-main-content {
+    display: grid !important;
+    grid-template-columns: 1fr 280px !important;
+    height: calc(100dvh - 44px) !important;
+    overflow: hidden !important;
+  }
+
+  .room-game-stage {
+    min-height: 0 !important;
+    height: 100% !important;
+    padding: 0.25rem 0.5rem !important;
+    overflow-y: auto !important;
+  }
+
+  .room-sidebar {
+    display: flex !important;
+    height: 100% !important;
+    border-top: none !important;
+    border-left: 1px solid var(--border) !important;
+  }
+
+  [dir="rtl"] .room-sidebar {
+    border-left: none !important;
+    border-right: 1px solid var(--border) !important;
+  }
+
+  .waiting-screen {
+    padding: 1rem 1.25rem;
   }
 }
 
@@ -106,36 +197,36 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 2.5rem;
+  padding: clamp(1.25rem, 3.5vw, 2.5rem);
   box-shadow: var(--shadow-lg);
 }
 
 .waiting-screen h2 {
-  font-size: 1.6rem;
+  font-size: clamp(1.2rem, 3vw, 1.6rem);
   margin-bottom: 0.5rem;
 }
 
 .waiting-screen p {
   color: var(--text-muted);
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .waiting-players-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(clamp(90px, 20vw, 130px), 1fr));
+  gap: clamp(0.5rem, 1.5vw, 1rem);
+  margin-bottom: 1.5rem;
 }
 
 .waiting-player-slot {
   background: var(--surface-alt);
   border: 1px dashed var(--border);
   border-radius: var(--radius-md);
-  padding: 1.25rem 0.75rem;
+  padding: clamp(0.75rem, 2vw, 1.25rem) 0.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .waiting-player-slot.occupied {

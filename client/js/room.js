@@ -509,6 +509,13 @@ function appendChatMessage(chatObj) {
 
   container.appendChild(bubble);
   container.scrollTop = container.scrollHeight;
+
+  // If mobile and sidebar is not open, highlight sidebar button
+  const sidebar = document.querySelector('.room-sidebar');
+  const indicator = document.querySelector('.sidebar-unread-indicator');
+  if (sidebar && !sidebar.classList.contains('mobile-open') && indicator) {
+    indicator.classList.add('has-unread');
+  }
 }
 
 function setupRoomDomListeners() {
@@ -574,4 +581,20 @@ function setupRoomDomListeners() {
       if (panel) panel.classList.add('active');
     });
   });
+
+  // Mobile Sidebar Toggle
+  const mobileSidebarToggleBtn = document.getElementById('mobile-sidebar-toggle-btn');
+  const sidebar = document.querySelector('.room-sidebar');
+  if (mobileSidebarToggleBtn && sidebar) {
+    mobileSidebarToggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('mobile-open');
+      const isOpen = sidebar.classList.contains('mobile-open');
+      mobileSidebarToggleBtn.classList.toggle('btn-primary', isOpen);
+      mobileSidebarToggleBtn.classList.toggle('btn-outline', !isOpen);
+      const indicator = document.querySelector('.sidebar-unread-indicator');
+      if (isOpen && indicator) {
+        indicator.classList.remove('has-unread');
+      }
+    });
+  }
 }

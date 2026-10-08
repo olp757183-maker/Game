@@ -44,6 +44,12 @@
 
   --font-family: 'Cairo', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Safe Area Insets for Modern Mobile Devices */
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
 }
 
 /* Light Mode Overrides */
@@ -77,6 +83,12 @@
   padding: 0;
 }
 
+html {
+  box-sizing: border-box;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
 html, body {
   width: 100%;
   min-height: 100%;
@@ -90,6 +102,9 @@ body {
   background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
+  min-height: 100dvh;
+  min-width: 320px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   line-height: 1.5;
@@ -115,9 +130,11 @@ a:hover {
    Header & Navbar
    ========================================================================== */
 .site-header {
-  height: 70px;
+  min-height: 64px;
+  height: auto;
   background: var(--surface-glass);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
@@ -130,25 +147,48 @@ a:hover {
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0.5rem 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
 }
 
 .brand-logo {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 1.4rem;
+  gap: 0.6rem;
+  font-size: clamp(1.15rem, 3.5vw, 1.4rem);
   font-weight: 800;
   color: var(--text);
   letter-spacing: -0.5px;
 }
 
 .brand-icon {
-  font-size: 1.8rem;
+  font-size: clamp(1.4rem, 4vw, 1.8rem);
   filter: drop-shadow(0 0 8px var(--accent-glow));
+}
+
+.mobile-menu-btn {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.25rem;
+  transition: var(--transition);
+  order: 2;
+}
+
+.mobile-menu-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
 }
 
 .nav-links {
@@ -176,7 +216,8 @@ a:hover {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  order: 3;
 }
 
 .icon-btn {
@@ -185,6 +226,8 @@ a:hover {
   color: var(--text);
   width: 38px;
   height: 38px;
+  min-width: 38px;
+  min-height: 38px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -203,16 +246,52 @@ a:hover {
 .user-pill {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  padding: 0.3rem 0.8rem;
+  padding: 0.25rem 0.7rem;
   border-radius: var(--radius-full);
 }
 
 .user-name {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: inline-flex;
+  }
+
+  .nav-links {
+    display: none;
+    order: 4;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+    padding: 0.75rem 0 0.25rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .nav-links.mobile-nav-open {
+    display: flex;
+  }
+
+  .nav-link {
+    padding: 0.65rem 0.85rem;
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    background: var(--surface-alt);
+  }
+
+  .header-actions {
+    gap: 0.35rem;
+  }
 }
 
 /* ==========================================================================
@@ -362,8 +441,8 @@ a:hover {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  width: min(700px, 90vw);
-  max-height: 90vh;
+  width: min(680px, calc(100vw - 24px));
+  max-height: min(90vh, calc(100dvh - 30px));
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-lg);
@@ -378,8 +457,22 @@ a:hover {
 
 @media (max-width: 640px) {
   .modal-box, .wild-modal-box {
-    width: min(95vw, 700px);
-    max-height: 90vh;
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 20px);
+    border-radius: var(--radius-md);
+  }
+
+  .modal-header {
+    padding: 0.85rem 1rem;
+  }
+
+  .modal-body {
+    padding: 0.85rem 1rem;
+    max-height: calc(100dvh - 130px);
+  }
+
+  .modal-footer {
+    padding: 0.75rem 1rem;
   }
 }
 
@@ -425,6 +518,7 @@ a:hover {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   max-height: calc(90vh - 140px);
 }
 
@@ -446,8 +540,8 @@ a:hover {
    ========================================================================== */
 .toast-container {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: calc(24px + var(--sab));
+  right: calc(24px + var(--sar));
   z-index: 9999;
   display: flex;
   flex-direction: column;
@@ -457,7 +551,15 @@ a:hover {
 
 [dir="rtl"] .toast-container {
   right: auto;
-  left: 24px;
+  left: calc(24px + var(--sal));
+}
+
+@media (max-width: 480px) {
+  .toast-container {
+    left: calc(12px + var(--sal)) !important;
+    right: calc(12px + var(--sar)) !important;
+    bottom: calc(12px + var(--sab));
+  }
 }
 
 .toast {
@@ -477,6 +579,13 @@ a:hover {
   transform: translateY(12px);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   min-width: 260px;
+}
+
+@media (max-width: 480px) {
+  .toast {
+    min-width: 0;
+    width: 100%;
+  }
 }
 
 .toast.visible {
@@ -525,6 +634,12 @@ a:hover {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+@media (max-width: 600px) {
+  .form-control {
+    font-size: 16px;
+  }
 }
 
 /* Footer */

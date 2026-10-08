@@ -37,11 +37,6 @@ db.exec(`
     created_at INTEGER NOT NULL
   );
 
-  -- Migration for existing db
-  try {
-    db.exec('ALTER TABLE users ADD COLUMN preferences_json TEXT;');
-  } catch (e) {}
-
   CREATE TABLE IF NOT EXISTS user_stats (
     user_id TEXT NOT NULL,
     game TEXT NOT NULL,
@@ -109,6 +104,13 @@ db.exec(`
     FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
   );
 `);
+
+// Safe migration for existing databases
+try {
+  db.exec('ALTER TABLE users ADD COLUMN preferences_json TEXT;');
+} catch (e) {
+  // Column already exists
+}
 
 export const database = {
   // Users

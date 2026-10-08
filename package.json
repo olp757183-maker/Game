@@ -9,6 +9,9 @@
     "dev": "node --watch server/server.js",
     "test": "node tests/test-runner.js"
   },
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "keywords": [
     "multiplayer",
     "games",

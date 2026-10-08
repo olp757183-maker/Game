@@ -6,9 +6,11 @@
 
 import api from './api.js';
 import ui from './ui.js';
+import socket from './socket.js';
 import i18n from './language.js';
 import { showToast, sfx } from './utils.js';
 import { getDefaultRules } from '../shared/rules.js';
+import { SOCKET_EVENTS } from '../shared/constants.js';
 
 let allRooms = [];
 let activeGameFilter = 'all';
@@ -32,7 +34,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Load and render open rooms
+  // Connect socket for real-time lobby synchronization
+  socket.connect();
+
+  socket.on(SOCKET_EVENTS.LOBBY_ROOM_CREATED, (newRoom) => {
+    console.log('[Lobby] Real-time room created:', newRoom);
+    const idx = allRooms.findIndex(r => r.id === newRoom.id || r.code === newRoom.code);
+    if (idx >= 0) {
+      allRooms[idx] = newRoom;
+    } else {
+      allRooms.unshift(newRoom);
+    }
+    renderRoomsTable();
+  });
+
+  socket.on(SOCKET_EVENTS.LOBBY_ROOM_UPDATED, (updatedRoom) => {
+    console.log('[Lobby] Real-time room updated:', updatedRoom);
+    const idx = allRooms.findIndex(r => r.id === updatedRoom.id || r.code === updatedRoom.code);
+    if (idx >= 0) {
+      allRooms[idx] = { ...allRooms[idx], ...updatedRoom };
+    } else {
+      allRooms.unshift(updatedRoom);
+    }
+    renderRoomsTable();
+  });
+
+  socket.on(SOCKET_EVENTS.LOBBY_ROOM_REMOVED, (data) => {
+    const id = data?.id;
+    console.log('[Lobby] Real-time room removed:', id);
+    if (id) {
+      allRooms = allRooms.filter(r => r.id !== id);
+      renderRoomsTable();
+    }
+  });
+
+  // Load and render initial open rooms
   await loadRooms();
 
   // Setup Event Listeners

@@ -5,6 +5,7 @@
 
 import { Server } from 'socket.io';
 import auth from './auth.js';
+import users from './users.js';
 import rooms, { activeRooms } from './rooms.js';
 import database from './database.js';
 import { SOCKET_EVENTS, ROOM_STATUS } from '../shared/constants.js';
@@ -30,14 +31,97 @@ const userSockets = new Map();
 // Map of socketId -> currentRoomId
 const socketRoomMap = new Map();
 
+// Global io instance reference
+let ioInstance = null;
+
+export function getIO() {
+  return ioInstance;
+}
+
+/**
+ * Broadcast full room and game state to each participant securely
+ */
+export function broadcastRoomState(room) {
+  if (!room || !ioInstance) return;
+  const channel = `room:${room.id}`;
+
+  console.log(`[ROOM STATE BROADCAST] room=${room.id} code=${room.code} players=${room.players.length} status=${room.status}`);
+
+  // Send personalized state to each active player in the room
+  for (const player of room.players) {
+    const playerSockets = userSockets.get(player.id);
+    const personalizedState = room.getStateForPlayer(player.id);
+
+    if (playerSockets && playerSockets.size > 0) {
+      for (const sId of playerSockets) {
+        ioInstance.to(sId).emit(SOCKET_EVENTS.ROOM_STATE, personalizedState);
+        if (personalizedState.game) {
+          ioInstance.to(sId).emit(SOCKET_EVENTS.GAME_STATE, personalizedState.game);
+        }
+      }
+    }
+  }
+
+  // Also broadcast public room state to the room channel
+  const publicState = {
+    room: room.getPublicRoomInfo(),
+    game: room.gameInstance ? (typeof room.gameInstance.getPublicState === 'function' ? room.gameInstance.getPublicState() : null) : null
+  };
+  ioInstance.to(channel).emit('room:public-state', publicState);
+}
+
+/**
+ * Broadcast lobby notifications
+ */
+export function broadcastLobbyRoomCreated(room) {
+  if (!ioInstance || !room) return;
+  if (room.privacy === 'public' && room.status !== ROOM_STATUS.CLOSED) {
+    ioInstance.emit(SOCKET_EVENTS.LOBBY_ROOM_CREATED, {
+      id: room.id,
+      code: room.code,
+      gameType: room.gameType,
+      hostName: room.players.find(p => p.isHost)?.username || 'Host',
+      players: `${room.players.length}/${room.maxPlayers}`,
+      status: room.status,
+      rules: room.rules,
+      createdAt: room.createdAt
+    });
+  }
+}
+
+export function broadcastLobbyRoomUpdated(room) {
+  if (!ioInstance || !room) return;
+  ioInstance.emit(SOCKET_EVENTS.LOBBY_ROOM_UPDATED, {
+    id: room.id,
+    code: room.code,
+    gameType: room.gameType,
+    hostName: room.players.find(p => p.isHost)?.username || 'Host',
+    players: `${room.players.length}/${room.maxPlayers}`,
+    status: room.status,
+    rules: room.rules,
+    createdAt: room.createdAt
+  });
+}
+
+export function broadcastLobbyRoomRemoved(roomId) {
+  if (!ioInstance || !roomId) return;
+  ioInstance.emit(SOCKET_EVENTS.LOBBY_ROOM_REMOVED, { id: roomId });
+}
+
 export function setupSocketServer(httpServer) {
   const io = new Server(httpServer, {
     cors: {
       origin: process.env.CORS_ORIGIN || '*',
       methods: ['GET', 'POST', 'PUT', 'DELETE'],
       credentials: true
-    }
+    },
+    transports: ['websocket', 'polling'],
+    pingTimeout: 20000,
+    pingInterval: 25000,
+    allowEIO3: true
   });
+
+  ioInstance = io;
 
   // Authentication Middleware
   io.use((socket, next) => {
@@ -57,6 +141,7 @@ export function setupSocketServer(httpServer) {
 
   io.on('connection', (socket) => {
     const user = socket.user;
+    console.log(`[SOCKET CONNECT] id=${socket.id} user=${user.username} (${user.id})`);
 
     // Track user socket
     if (!userSockets.has(user.id)) {
@@ -64,44 +149,68 @@ export function setupSocketServer(httpServer) {
     }
     userSockets.get(user.id).add(socket.id);
 
-    // Broadcast room and game state to each participant securely
-    function broadcastRoomState(room) {
-      if (!room) return;
-
-      for (const player of room.players) {
-        const playerSockets = userSockets.get(player.id);
-        if (playerSockets) {
-          const personalizedState = room.getStateForPlayer(player.id);
-          for (const sId of playerSockets) {
-            io.to(sId).emit(SOCKET_EVENTS.ROOM_STATE, personalizedState);
-          }
-        }
-      }
-    }
-
     // Join Room
     socket.on(SOCKET_EVENTS.JOIN_ROOM, ({ roomId, code }) => {
       try {
+        console.log(`[ROOM JOIN] socket=${socket.id} user=${user.username} roomId=${roomId} code=${code}`);
+
         let room = null;
         if (roomId) {
           room = rooms.getRoomById(roomId);
-        } else if (code) {
-          room = rooms.getRoomByCode(code);
+        }
+        if (!room && (code || roomId)) {
+          room = rooms.getRoomByCode(code || roomId);
         }
 
         if (!room) {
-          return socket.emit(SOCKET_EVENTS.ERROR, { messageEn: 'Room not found', messageAr: 'الغرفة غير موجودة' });
+          return socket.emit(SOCKET_EVENTS.ERROR, {
+            code: 'ROOM_NOT_FOUND',
+            messageEn: 'Room not found',
+            messageAr: 'الغرفة غير موجودة'
+          });
         }
 
-        // Add player to room model
-        room.addPlayer(user);
+        // Check if game in progress or locked
+        const existingPlayer = room.players.find(p => p.id === user.id);
+        if (room.status !== ROOM_STATUS.WAITING && !existingPlayer) {
+          return socket.emit(SOCKET_EVENTS.ERROR, {
+            code: 'ROOM_STARTED',
+            messageEn: 'Game already in progress',
+            messageAr: 'اللعبة بدأت بالفعل'
+          });
+        }
 
-        // Associate socket with Socket.IO room channel
-        socket.join(`room:${room.id}`);
+        if (room.locked && !existingPlayer) {
+          return socket.emit(SOCKET_EVENTS.ERROR, {
+            code: 'ROOM_LOCKED',
+            messageEn: 'Room is locked',
+            messageAr: 'الغرفة مغلقة'
+          });
+        }
+
+        // Add or re-activate player in room
+        const isHost = (room.hostId === user.id);
+        const player = room.addPlayer(user, isHost);
+
+        // Associate socket with unified Socket.IO room channel
+        const channel = `room:${room.id}`;
+        socket.join(channel);
         socketRoomMap.set(socket.id, room.id);
 
-        // Notify room members
-        io.to(`room:${room.id}`).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
+        // Send acknowledgement to the joining client
+        socket.emit(SOCKET_EVENTS.ROOM_JOINED, {
+          roomId: room.id,
+          roomCode: room.code,
+          player
+        });
+
+        // Notify other room members
+        socket.to(channel).emit(SOCKET_EVENTS.ROOM_PLAYER_JOINED, {
+          player,
+          username: user.username
+        });
+
+        io.to(channel).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
           id: `sys_${Date.now()}_${Math.random()}`,
           isSystem: true,
           messageEn: `${user.username} joined the room`,
@@ -109,9 +218,14 @@ export function setupSocketServer(httpServer) {
           timestamp: Date.now()
         });
 
+        // Broadcast updated room state to all players
         broadcastRoomState(room);
+
+        // Update lobby count
+        broadcastLobbyRoomUpdated(room);
       } catch (err) {
         socket.emit(SOCKET_EVENTS.ERROR, {
+          code: 'JOIN_FAILED',
           messageEn: err.message || 'Failed to join room',
           messageAr: err.message || 'تعذر الانضمام إلى الغرفة'
         });
@@ -121,15 +235,23 @@ export function setupSocketServer(httpServer) {
     // Leave Room
     socket.on(SOCKET_EVENTS.LEAVE_ROOM, ({ roomId }) => {
       try {
-        const room = rooms.getRoomById(roomId);
+        console.log(`[ROOM LEAVE] socket=${socket.id} user=${user.username} roomId=${roomId}`);
+        const targetRoomId = roomId || socketRoomMap.get(socket.id);
+        const room = rooms.getRoomById(targetRoomId);
         if (!room) return;
 
-        socket.leave(`room:${room.id}`);
+        const channel = `room:${room.id}`;
+        socket.leave(channel);
         socketRoomMap.delete(socket.id);
 
         const removed = room.removePlayer(user.id);
         if (removed) {
-          io.to(`room:${room.id}`).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
+          io.to(channel).emit(SOCKET_EVENTS.ROOM_PLAYER_LEFT, {
+            playerId: user.id,
+            username: user.username
+          });
+
+          io.to(channel).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
             id: `sys_${Date.now()}_${Math.random()}`,
             isSystem: true,
             messageEn: `${user.username} left the room`,
@@ -139,8 +261,10 @@ export function setupSocketServer(httpServer) {
 
           if (room.players.length === 0) {
             rooms.closeRoom(room.id);
+            broadcastLobbyRoomRemoved(room.id);
           } else {
             broadcastRoomState(room);
+            broadcastLobbyRoomUpdated(room);
           }
         }
 
@@ -153,6 +277,7 @@ export function setupSocketServer(httpServer) {
     // Start Game (Host only)
     socket.on(SOCKET_EVENTS.START_GAME, ({ roomId }) => {
       try {
+        console.log(`[GAME START] socket=${socket.id} user=${user.username} roomId=${roomId}`);
         const room = rooms.getRoomById(roomId);
         if (!room) throw new Error('Room not found');
 
@@ -160,8 +285,11 @@ export function setupSocketServer(httpServer) {
         if (!EngineClass) throw new Error('Game engine not available');
 
         room.startGame(user.id, EngineClass);
+        const channel = `room:${room.id}`;
 
-        io.to(`room:${room.id}`).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
+        io.to(channel).emit(SOCKET_EVENTS.ROOM_STARTED, { roomId: room.id });
+
+        io.to(channel).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
           id: `sys_${Date.now()}_${Math.random()}`,
           isSystem: true,
           messageEn: 'The game has started!',
@@ -170,6 +298,7 @@ export function setupSocketServer(httpServer) {
         });
 
         broadcastRoomState(room);
+        broadcastLobbyRoomUpdated(room);
       } catch (err) {
         socket.emit(SOCKET_EVENTS.ERROR, { messageEn: err.message, messageAr: err.message });
       }
@@ -183,8 +312,9 @@ export function setupSocketServer(httpServer) {
 
         const EngineClass = GAME_ENGINES[room.gameType];
         room.restartGame(user.id, EngineClass);
+        const channel = `room:${room.id}`;
 
-        io.to(`room:${room.id}`).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
+        io.to(channel).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
           id: `sys_${Date.now()}_${Math.random()}`,
           isSystem: true,
           messageEn: 'Game restarted by host',
@@ -193,6 +323,7 @@ export function setupSocketServer(httpServer) {
         });
 
         broadcastRoomState(room);
+        broadcastLobbyRoomUpdated(room);
       } catch (err) {
         socket.emit(SOCKET_EVENTS.ERROR, { messageEn: err.message, messageAr: err.message });
       }
@@ -201,11 +332,20 @@ export function setupSocketServer(httpServer) {
     // Update Settings & Rules (Host only)
     socket.on(SOCKET_EVENTS.UPDATE_SETTINGS, ({ roomId, settings, rules }) => {
       try {
+        console.log(`[ROOM SETTINGS] user=${user.username} roomId=${roomId}`);
         const room = rooms.getRoomById(roomId);
         if (!room) throw new Error('Room not found');
 
         room.updateSettings(user.id, settings, rules);
+        const channel = `room:${room.id}`;
+
+        io.to(channel).emit(SOCKET_EVENTS.ROOM_SETTINGS_UPDATED, {
+          settings: room.settings,
+          rules: room.rules
+        });
+
         broadcastRoomState(room);
+        broadcastLobbyRoomUpdated(room);
       } catch (err) {
         socket.emit(SOCKET_EVENTS.ERROR, { messageEn: err.message, messageAr: err.message });
       }
@@ -230,7 +370,14 @@ export function setupSocketServer(httpServer) {
             }
           }
 
-          io.to(`room:${room.id}`).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
+          const channel = `room:${room.id}`;
+          io.to(channel).emit(SOCKET_EVENTS.ROOM_PLAYER_LEFT, {
+            playerId: targetUserId,
+            username: kicked.username,
+            kicked: true
+          });
+
+          io.to(channel).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
             id: `sys_${Date.now()}_${Math.random()}`,
             isSystem: true,
             messageEn: `${kicked.username} was kicked from the room`,
@@ -239,6 +386,7 @@ export function setupSocketServer(httpServer) {
           });
 
           broadcastRoomState(room);
+          broadcastLobbyRoomUpdated(room);
         }
       } catch (err) {
         socket.emit(SOCKET_EVENTS.ERROR, { messageEn: err.message, messageAr: err.message });
@@ -254,14 +402,16 @@ export function setupSocketServer(httpServer) {
 
         room.transferHost(targetUserId);
         broadcastRoomState(room);
+        broadcastLobbyRoomUpdated(room);
       } catch (err) {
         socket.emit(SOCKET_EVENTS.ERROR, { messageEn: err.message, messageAr: err.message });
       }
     });
 
-    // Update Player Skin (Phase 5)
+    // Update Player Skin
     socket.on('player:skin:update', async ({ gameType, skin }) => {
       try {
+        console.log(`[SKIN UPDATE] user=${user.username} gameType=${gameType} skin=${skin}`);
         // Save to DB
         const profile = users.getUserProfile(user.id);
         const prefs = profile.preferences || {};
@@ -277,14 +427,20 @@ export function setupSocketServer(httpServer) {
         if (roomId) {
           const room = rooms.getRoomById(roomId);
           if (room) {
-             io.to(`room:${room.id}`).emit('player:skin:updated', {
-               playerId: user.id,
-               gameType,
-               skin,
-               username: user.username,
-               avatar: user.avatar
-             });
-             broadcastRoomState(room); // Optional, if state relies on it
+            const player = room.players.find(p => p.id === user.id);
+            if (player) {
+              player.preferences = prefs;
+            }
+
+            const channel = `room:${room.id}`;
+            io.to(channel).emit('player:skin-updated', {
+              playerId: user.id,
+              gameType,
+              skin,
+              username: user.username,
+              avatar: user.avatar
+            });
+            broadcastRoomState(room);
           }
         }
       } catch (err) {
@@ -295,6 +451,7 @@ export function setupSocketServer(httpServer) {
     // Game Action (Server Authoritative)
     socket.on(SOCKET_EVENTS.GAME_ACTION, ({ roomId, action }) => {
       try {
+        console.log(`[GAME ACTION] user=${user.username} roomId=${roomId} action=${action?.type}`);
         const room = rooms.getRoomById(roomId);
         if (!room) throw new Error('Room not found');
         if (!room.gameInstance) throw new Error('No game is currently active');
@@ -331,6 +488,7 @@ export function setupSocketServer(httpServer) {
           } catch (dbErr) {
             console.error('Failed to record match stats:', dbErr);
           }
+          broadcastLobbyRoomUpdated(room);
         }
 
         broadcastRoomState(room);
@@ -349,15 +507,16 @@ export function setupSocketServer(httpServer) {
         if (!room) throw new Error('Room not found');
 
         const voteResult = room.voteRematch(user.id);
+        const channel = `room:${room.id}`;
 
-        io.to(`room:${room.id}`).emit(SOCKET_EVENTS.REMATCH_UPDATE, {
+        io.to(channel).emit(SOCKET_EVENTS.REMATCH_UPDATE, {
           votedCount: voteResult.votedCount,
           totalNeeded: voteResult.totalNeeded,
           votedPlayers: Array.from(room.rematchVotes),
           userWhoVoted: user.username
         });
 
-        io.to(`room:${room.id}`).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
+        io.to(channel).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
           id: `sys_${Date.now()}_${Math.random()}`,
           isSystem: true,
           messageEn: `${user.username} is ready for a rematch (${voteResult.votedCount}/${voteResult.totalNeeded})`,
@@ -370,7 +529,7 @@ export function setupSocketServer(httpServer) {
           if (EngineClass) {
             room.startNextGame(EngineClass);
 
-            io.to(`room:${room.id}`).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
+            io.to(channel).emit(SOCKET_EVENTS.CHAT_BROADCAST, {
               id: `sys_${Date.now()}_${Math.random()}`,
               isSystem: true,
               messageEn: 'All players agreed! New match has started.',
@@ -381,6 +540,7 @@ export function setupSocketServer(httpServer) {
         }
 
         broadcastRoomState(room);
+        broadcastLobbyRoomUpdated(room);
       } catch (err) {
         socket.emit(SOCKET_EVENTS.ERROR, { messageEn: err.message, messageAr: err.message });
       }
@@ -430,17 +590,21 @@ export function setupSocketServer(httpServer) {
 
     // Reconnection Request
     socket.on(SOCKET_EVENTS.RECONNECT, ({ roomId }) => {
+      console.log(`[USER RECONNECT] socket=${socket.id} user=${user.username} roomId=${roomId}`);
       const room = rooms.getRoomById(roomId);
       if (room) {
         room.markPlayerConnected(user.id, true);
-        socket.join(`room:${room.id}`);
+        const channel = `room:${room.id}`;
+        socket.join(channel);
         socketRoomMap.set(socket.id, room.id);
         socket.emit(SOCKET_EVENTS.ROOM_STATE, room.getStateForPlayer(user.id));
+        broadcastRoomState(room);
       }
     });
 
     // Disconnect Handler
-    socket.on('disconnect', () => {
+    socket.on('disconnect', (reason) => {
+      console.log(`[SOCKET DISCONNECT] socket=${socket.id} user=${user.username} reason=${reason}`);
       const uSockets = userSockets.get(user.id);
       if (uSockets) {
         uSockets.delete(socket.id);
@@ -454,10 +618,17 @@ export function setupSocketServer(httpServer) {
         socketRoomMap.delete(socket.id);
         const room = rooms.getRoomById(roomId);
         if (room) {
-          // Check if user has no other active sockets
+          // Check if user has no remaining active sockets
           if (!userSockets.has(user.id)) {
             room.markPlayerConnected(user.id, false);
+            const channel = `room:${room.id}`;
+            io.to(channel).emit(SOCKET_EVENTS.ROOM_PLAYER_LEFT, {
+              playerId: user.id,
+              username: user.username,
+              disconnected: true
+            });
             broadcastRoomState(room);
+            broadcastLobbyRoomUpdated(room);
           }
         }
       }

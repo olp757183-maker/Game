@@ -53,19 +53,100 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Connect to Socket.IO
-  socket.connect();
+  // Fetch initial room info via HTTP API immediately so skeleton renders instantly
+  try {
+    const res = await api.getRoom(roomId || roomCode);
+    if (res && res.room) {
+      handleRoomState({ room: res.room });
+    }
+  } catch (err) {
+    console.log('[Room] HTTP initial fetch:', err.message);
+  }
 
-  // Setup Socket Events
+  // Setup Socket Events before connecting
   socket.on(SOCKET_EVENTS.ROOM_STATE, (data) => {
     handleRoomState(data);
+  });
+
+  socket.on('room:public-state', (data) => {
+    if (data && data.room) {
+      handleRoomState({ room: data.room, game: data.game });
+    }
+  });
+
+  socket.on(SOCKET_EVENTS.ROOM_JOINED, (data) => {
+    console.log('[Room] room:joined received:', data);
+    if (data && data.roomId) {
+      if (currentRoomData) {
+        currentRoomData.id = data.roomId;
+        currentRoomData.code = data.roomCode;
+      }
+    }
+  });
+
+  socket.on(SOCKET_EVENTS.ROOM_PLAYER_JOINED, (data) => {
+    console.log('[Room] Player joined:', data);
+    sfx.click();
+    showToast(i18n.getLanguage() === 'ar' ? `انضم ${data.username} إلى الغرفة` : `${data.username} joined the room`, 'info');
+  });
+
+  socket.on(SOCKET_EVENTS.ROOM_PLAYER_LEFT, (data) => {
+    console.log('[Room] Player left:', data);
+    showToast(i18n.getLanguage() === 'ar' ? `غادر ${data.username} الغرفة` : `${data.username} left the room`, 'warning');
+  });
+
+  socket.on(SOCKET_EVENTS.ROOM_SETTINGS_UPDATED, (data) => {
+    showToast(i18n.getLanguage() === 'ar' ? 'تم تحديث إعدادات الغرفة' : 'Room settings updated', 'info');
+  });
+
+  socket.on(SOCKET_EVENTS.ROOM_STARTED, () => {
+    sfx.winFanfare();
+    showToast(i18n.getLanguage() === 'ar' ? 'بدأت اللعبة!' : 'Game started!', 'success');
+  });
+
+  socket.on('player:skin-updated', (data) => {
+    console.log('[Room] Skin updated for player:', data);
+    if (currentRoomData && currentRoomData.players) {
+      const p = currentRoomData.players.find(x => x.id === data.playerId);
+      if (p) {
+        p.preferences = p.preferences || {};
+        p.preferences.gameSkins = p.preferences.gameSkins || {};
+        p.preferences.gameSkins[data.gameType] = data.skin;
+        handleRoomState({ room: currentRoomData });
+      }
+    }
   });
 
   socket.on(SOCKET_EVENTS.CHAT_BROADCAST, (chatObj) => {
     appendChatMessage(chatObj);
   });
 
-  // Join Room
+  socket.on('room:error', (err) => {
+    console.error('[Room] Room error received:', err);
+    const msg = i18n.getLanguage() === 'ar' ? (err.messageAr || err.messageEn || err.message) : (err.messageEn || err.messageAr || err.message);
+    showToast(msg || 'Room error', 'error');
+
+    if (err.code === 'ROOM_NOT_FOUND' || err.code === 'ROOM_FULL') {
+      const stage = document.getElementById('game-stage-container');
+      if (stage) {
+        stage.innerHTML = `
+          <div class="waiting-screen">
+            <h2 style="color: #ef4444;">⚠️ ${escapeHtml(msg || 'خطأ')}</h2>
+            <p style="margin: 1.25rem 0; font-size: 1.1rem;">${i18n.getLanguage() === 'ar' ? 'تعذر الدخول إلى هذه الغرفة.' : 'Unable to join this room.'}</p>
+            <a href="/lobby.html" class="btn btn-primary btn-lg" style="margin-top: 1rem;">🚪 ${i18n.getLanguage() === 'ar' ? 'العودة لصالة الألعاب' : 'Back to Lobby'}</a>
+          </div>
+        `;
+      }
+    }
+  });
+
+  // Connect socket and join room
+  try {
+    await socket.connect();
+  } catch (err) {
+    console.warn('[Room] Socket connect warning:', err.message);
+  }
+
   socket.joinRoom(roomId, roomCode);
 
   // Setup DOM Event Listeners
@@ -74,15 +155,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function handleRoomState(data) {
   const { room, game, isHost: serverIsHost, myPlayerId } = data;
+  if (!room) return;
   currentRoomData = room;
 
   if (window.DEBUG_GAME) {
-    console.log('[GAME]');
-    console.log('Game Type:', room.gameType);
-    console.log('Room:', room.id, 'Code:', room.code);
-    console.log('Players:', room.players);
-    console.log('Current Turn:', game?.currentTurnPlayerId || game?.currentTurn || null);
-    console.log('Game State:', game);
+    console.log('[GAME STATE UPDATE]');
+    console.log('Room:', room.id, 'Code:', room.code, 'Players:', room.players?.length);
+    console.log('Game:', game);
   }
 
   const user = api.getUser() || {};
@@ -165,9 +244,18 @@ function updateRoomHeader(room, amHost) {
 }
 
 function renderWaitingLobby(stage, room, isHost) {
+  // Deduplicate players by unique ID
+  const uniqueMap = new Map();
+  (room.players || []).forEach(p => {
+    if (p && p.id && !uniqueMap.has(p.id)) {
+      uniqueMap.set(p.id, p);
+    }
+  });
+  const uniquePlayers = Array.from(uniqueMap.values());
+
   const slots = [];
   for (let i = 0; i < room.maxPlayers; i++) {
-    const player = room.players[i];
+    const player = uniquePlayers[i];
     if (player) {
       slots.push(`
         <div class="waiting-player-slot occupied">
@@ -186,7 +274,7 @@ function renderWaitingLobby(stage, room, isHost) {
     }
   }
 
-  const canStart = isHost && room.players.length >= room.minPlayers;
+  const canStart = isHost && uniquePlayers.length >= room.minPlayers;
 
   stage.innerHTML = `
     <div class="waiting-screen">
@@ -200,10 +288,10 @@ function renderWaitingLobby(stage, room, isHost) {
       <div class="waiting-actions">
         ${isHost ? `
           <button id="start-game-btn" class="btn btn-lg btn-primary" ${!canStart ? 'disabled' : ''} style="${canStart ? 'box-shadow: 0 0 20px rgba(16, 185, 129, 0.6); background: #10b981;' : ''}">
-            🚀 ${i18n.t('startGameBtn')} (${room.players.length}/${room.minPlayers} ${room.players.length >= room.minPlayers ? 'جاهز!' : 'مطلوب'})
+            🚀 ${i18n.t('startGameBtn')} (${uniquePlayers.length}/${room.minPlayers} ${uniquePlayers.length >= room.minPlayers ? 'جاهز!' : 'مطلوب'})
           </button>
         ` : `
-          <div class="turn-status-banner">🕒 في انتظار المضيف لبدء اللعبة... (${room.players.length}/${room.minPlayers})</div>
+          <div class="turn-status-banner">🕒 في انتظار المضيف لبدء اللعبة... (${uniquePlayers.length}/${room.minPlayers})</div>
         `}
       </div>
     </div>
@@ -355,12 +443,20 @@ function showGameOverOverlay(room, game, isHost, myId) {
 
 function updatePlayersSidebar(players, hostId) {
   const container = document.getElementById('sidebar-players-container');
-  if (!container) return;
+  if (!container || !players) return;
+
+  const uniqueMap = new Map();
+  players.forEach(p => {
+    if (p && p.id && !uniqueMap.has(p.id)) {
+      uniqueMap.set(p.id, p);
+    }
+  });
+  const uniquePlayers = Array.from(uniqueMap.values());
 
   const currentUserId = api.getUser()?.id;
   const isCurrentUserHost = (currentUserId === hostId);
 
-  container.innerHTML = players.map(p => `
+  container.innerHTML = uniquePlayers.map(p => `
     <div class="sidebar-player-item">
       <div class="player-item-meta">
         <span class="player-connection-dot ${p.connected ? '' : 'disconnected'}"></span>

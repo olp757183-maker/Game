@@ -101,13 +101,24 @@ export const SOCKET_EVENTS = {
   RECONNECT: 'user:reconnect',
 
   // Server -> Client
+  ROOM_JOINED: 'room:joined',
+  ROOM_PLAYER_JOINED: 'room:player-joined',
+  ROOM_PLAYER_LEFT: 'room:player-left',
+  ROOM_SETTINGS_UPDATED: 'room:settings-updated',
+  ROOM_STARTED: 'room:started',
   ROOM_STATE: 'room:state',
   GAME_STATE: 'game:state',
   REMATCH_UPDATE: 'game:rematch_update',
   CHAT_BROADCAST: 'chat:broadcast',
-  ERROR: 'error:message',
+  ERROR: 'room:error',
+  ERROR_MESSAGE: 'error:message',
   NOTIFICATION: 'system:notification',
-  ROOM_CLOSED: 'room:closed'
+  ROOM_CLOSED: 'room:closed',
+
+  // Lobby Real-Time Events
+  LOBBY_ROOM_CREATED: 'lobby:room-created',
+  LOBBY_ROOM_UPDATED: 'lobby:room-updated',
+  LOBBY_ROOM_REMOVED: 'lobby:room-removed'
 };
 
 export const UNO_COLORS = {

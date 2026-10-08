@@ -12,7 +12,7 @@ import auth from './auth.js';
 import users from './users.js';
 import rooms from './rooms.js';
 import database from './database.js';
-import { setupSocketServer } from './socket.js';
+import { setupSocketServer, broadcastLobbyRoomCreated } from './socket.js';
 import { GAME_INFO, GAME_TYPES } from '../shared/constants.js';
 import { validateUsername, validateEmail, validatePassword, validateRoomCode, validateGameType } from '../shared/validation.js';
 
@@ -22,6 +22,7 @@ const CLIENT_DIR = path.join(__dirname, '..', 'client');
 const SHARED_DIR = path.join(__dirname, '..', 'shared');
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 // Setup Socket.IO
@@ -153,6 +154,8 @@ app.post('/api/rooms', auth.middleware, (req, res) => {
       privacy: privacy || 'public',
       rules: rules || {}
     });
+
+    broadcastLobbyRoomCreated(room);
 
     res.status(201).json({ room: room.getPublicRoomInfo() });
   } catch (err) {

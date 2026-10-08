@@ -202,9 +202,24 @@ app.get('*', (req, res) => {
 });
 
 // Start Server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[Classic Games Server] Running on port ${PORT}`);
 });
+
+// Backup port listener in case Railway routes to 8080 or 3000
+const ALT_PORT = PORT === 8080 ? 3000 : 8080;
+try {
+  const altServer = http.createServer(app);
+  altServer.on('error', () => {
+    // Port might be in use or restricted, fail gracefully
+  });
+  altServer.listen(ALT_PORT, '0.0.0.0', () => {
+    console.log(`[Classic Games Server] Also listening on fallback port ${ALT_PORT}`);
+    try {
+      io.attach(altServer);
+    } catch (e) {}
+  });
+} catch (e) {}
 
 export { app, server };

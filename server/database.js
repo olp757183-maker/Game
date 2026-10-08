@@ -33,8 +33,14 @@ db.exec(`
     password_hash TEXT,
     avatar TEXT,
     is_guest INTEGER DEFAULT 0,
+    preferences_json TEXT,
     created_at INTEGER NOT NULL
   );
+
+  -- Migration for existing db
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN preferences_json TEXT;');
+  } catch (e) {}
 
   CREATE TABLE IF NOT EXISTS user_stats (
     user_id TEXT NOT NULL,
@@ -106,12 +112,12 @@ db.exec(`
 
 export const database = {
   // Users
-  createUser({ id, username, email, passwordHash, avatar, isGuest = false }) {
+  createUser({ id, username, email, passwordHash, avatar, isGuest = false, preferences = {} }) {
     const stmt = db.prepare(`
-      INSERT INTO users (id, username, email, password_hash, avatar, is_guest, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (id, username, email, password_hash, avatar, is_guest, preferences_json, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    stmt.run(id, username, email || null, passwordHash || null, avatar || 'avatar1', isGuest ? 1 : 0, Date.now());
+    stmt.run(id, username, email || null, passwordHash || null, avatar || 'avatar1', isGuest ? 1 : 0, JSON.stringify(preferences), Date.now());
     return this.findUserById(id);
   },
 
@@ -126,6 +132,7 @@ export const database = {
       passwordHash: user.password_hash,
       avatar: user.avatar,
       isGuest: Boolean(user.is_guest),
+      preferences: user.preferences_json ? JSON.parse(user.preferences_json) : {},
       createdAt: user.created_at
     };
   },
@@ -141,6 +148,7 @@ export const database = {
       passwordHash: user.password_hash,
       avatar: user.avatar,
       isGuest: Boolean(user.is_guest),
+      preferences: user.preferences_json ? JSON.parse(user.preferences_json) : {},
       createdAt: user.created_at
     };
   },
@@ -157,11 +165,12 @@ export const database = {
       passwordHash: user.password_hash,
       avatar: user.avatar,
       isGuest: Boolean(user.is_guest),
+      preferences: user.preferences_json ? JSON.parse(user.preferences_json) : {},
       createdAt: user.created_at
     };
   },
 
-  updateUserProfile(id, { username, avatar }) {
+  updateUserProfile(id, { username, avatar, preferences }) {
     const updates = [];
     const values = [];
     if (username) {
@@ -171,6 +180,10 @@ export const database = {
     if (avatar) {
       updates.push('avatar = ?');
       values.push(avatar);
+    }
+    if (preferences) {
+      updates.push('preferences_json = ?');
+      values.push(JSON.stringify(preferences));
     }
     if (updates.length === 0) return this.findUserById(id);
     values.push(id);

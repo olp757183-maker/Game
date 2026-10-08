@@ -1002,3 +1002,19 @@
   margin-top: 1.25rem;
   justify-content: center;
 }
+
+/* --------------------------------------------------------------------------
+   Skins (UNO)
+   -------------------------------------------------------------------------- */
+.uno-game-container.skin-dark .uno-card {
+  filter: brightness(0.6) contrast(1.3);
+  border-color: #222;
+}
+
+.uno-game-container.skin-neon .uno-card {
+  border-color: #fff;
+  box-shadow: 0 0 15px currentColor;
+}
+.uno-game-container.skin-neon .uno-card-oval {
+  background: rgba(255, 255, 255, 0.4);
+}

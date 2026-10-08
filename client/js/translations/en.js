@@ -96,6 +96,10 @@ export const en = {
   unoPassBtn: "Pass Turn",
   unoSelectColor: "Choose Wild Color",
   unoPenaltyMessage: "Penalty cards drawn!",
+  activeColorLabel: "Active Color",
+  unoDiscardLabel: "Top Card",
+  cardsPlayBtn: "Play Card",
+  yourHand: "Your Hand",
 
   // Chess Specific
   chessCheck: "Check!",

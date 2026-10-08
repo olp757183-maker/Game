@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     joinRoomBtn.addEventListener('click', () => {
       const code = prompt(i18n.getLanguage() === 'ar' ? 'أدخل رمز الغرفة (مثال: X7K92P):' : 'Enter room code (e.g. X7K92P):');
       if (code && code.trim()) {
-        window.location.href = `/room.html?code=${code.trim().toUpperCase()}`;
+        window.location.href = `/room/${code.trim().toUpperCase()}`;
       }
     });
   }

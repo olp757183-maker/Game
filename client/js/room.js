@@ -29,18 +29,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Ensure authenticated user exists
   let token = api.getToken();
   if (!token) {
-    try {
-      await api.guest();
-      ui.renderHeaderUser();
-    } catch (e) {
-      console.warn('Guest creation error:', e);
-    }
+    window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
+    return;
   }
 
   // Get Room ID or Code from URL
   const urlParams = new URLSearchParams(window.location.search);
-  const roomId = urlParams.get('id');
-  const roomCode = urlParams.get('code');
+  let roomId = urlParams.get('id');
+  let roomCode = urlParams.get('code');
+  
+  if (!roomId && !roomCode && window.location.pathname.startsWith('/room/')) {
+    const pathParts = window.location.pathname.split('/');
+    if (pathParts.length >= 3) {
+      // Assuming /room/ID_OR_CODE
+      roomCode = pathParts[2];
+      roomId = pathParts[2]; // Can be either, server will resolve
+    }
+  }
 
   if (!roomId && !roomCode) {
     showToast('Invalid room URL', 'error');
@@ -418,6 +423,19 @@ function setupRoomDomListeners() {
       if (currentRoomData?.code) {
         navigator.clipboard.writeText(currentRoomData.code);
         showToast(i18n.t('codeCopied'), 'success');
+        sfx.click();
+      }
+    });
+  }
+
+  // Copy Link
+  const copyLinkBtn = document.getElementById('copy-room-link-btn');
+  if (copyLinkBtn) {
+    copyLinkBtn.addEventListener('click', () => {
+      if (currentRoomData?.id) {
+        const link = `${window.location.origin}/room/${currentRoomData.id}`;
+        navigator.clipboard.writeText(link);
+        showToast(i18n.getLanguage() === 'ar' ? 'تم نسخ الرابط' : 'Link copied', 'success');
         sfx.click();
       }
     });

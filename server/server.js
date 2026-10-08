@@ -27,9 +27,20 @@ const server = http.createServer(app);
 // Setup Socket.IO
 const io = setupSocketServer(server);
 
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// Health Check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
 // Serve client static files & shared directory
 app.use('/shared', express.static(SHARED_DIR));
@@ -108,8 +119,8 @@ app.get('/api/me', auth.middleware, (req, res) => {
 // Update Profile
 app.put('/api/profile', auth.middleware, (req, res) => {
   try {
-    const { username, avatar } = req.body;
-    const updated = users.updateProfile(req.user.id, { username, avatar });
+    const { username, avatar, preferences } = req.body;
+    const updated = users.updateProfile(req.user.id, { username, avatar, preferences });
     res.json({ user: users.getUserProfile(updated.id) });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -182,14 +193,18 @@ app.post('/api/rooms/:idOrCode/join', auth.middleware, (req, res) => {
 });
 
 // Fallback to client SPA / direct HTML
+app.get('/room/:idOrCode', (req, res) => {
+  res.sendFile(path.join(CLIENT_DIR, 'room.html'));
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(CLIENT_DIR, 'index.html'));
 });
 
 // Start Server
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`[Classic Games Server] Running on http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Classic Games Server] Running on port ${PORT}`);
 });
 
 export { app, server };

@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Game Room — Classic Games</title>
-  <link rel="stylesheet" href="./css/main.css">
-  <link rel="stylesheet" href="./css/room.css">
-  <link rel="stylesheet" href="./css/games.css">
-  <link rel="stylesheet" href="./css/responsive.css">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/room.css">
+  <link rel="stylesheet" href="/css/games.css">
+  <link rel="stylesheet" href="/css/responsive.css">
 </head>
 <body>
   <!-- Room Top Header -->
   <header class="room-header">
     <div class="room-meta-group">
-      <a href="./lobby.html" class="brand-logo" style="font-size: 1.1rem;">
+      <a href="/lobby.html" class="brand-logo" style="font-size: 1.1rem;">
         <span class="brand-icon">🎮</span>
       </a>
 
@@ -22,6 +22,10 @@
         <span id="room-code-display">------</span>
         <span style="font-size: 0.8rem; opacity: 0.7;">📋</span>
       </div>
+
+      <button id="copy-room-link-btn" class="btn btn-sm btn-outline" title="Copy full room link">
+        🔗 مشاركة الرابط
+      </button>
 
       <div class="room-game-title" id="room-game-title">Loading...</div>
       <span id="room-host-badge" class="badge badge-info" style="display: none;" data-i18n="hostBadge">Host</span>
@@ -75,6 +79,6 @@
   </main>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="./js/room.js"></script>
+  <script type="module" src="/js/room.js"></script>
 </body>
 </html>

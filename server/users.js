@@ -90,6 +90,7 @@ export const users = {
       email: user.email,
       avatar: user.avatar,
       isGuest: user.isGuest,
+      preferences: user.preferences || {},
       createdAt: user.createdAt,
       stats
     };

@@ -96,6 +96,10 @@ export const ar = {
   unoPassBtn: "تمرير الدور",
   unoSelectColor: "اختر لون البطاقة الخاصة",
   unoPenaltyMessage: "تم تطبيق عقوبة السحب!",
+  activeColorLabel: "اللون الحالي",
+  unoDiscardLabel: "ورقة اللعب",
+  cardsPlayBtn: "العب البطاقة",
+  yourHand: "أوراقك",
 
   // Chess Specific
   chessCheck: "كش ملك!",

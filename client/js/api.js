@@ -107,10 +107,10 @@ class ApiService {
     return res.user;
   }
 
-  async updateProfile({ username, avatar }) {
+  async updateProfile({ username, avatar, preferences }) {
     const res = await this.request('/profile', {
       method: 'PUT',
-      body: JSON.stringify({ username, avatar })
+      body: JSON.stringify({ username, avatar, preferences })
     });
     this.setUser(res.user);
     return res.user;

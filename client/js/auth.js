@@ -13,7 +13,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // If already logged in, redirect to lobby if on auth pages
   const token = api.getToken();
   if (token && (window.location.pathname.endsWith('login.html') || window.location.pathname.endsWith('register.html'))) {
-    window.location.href = '/lobby.html';
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirect = urlParams.get('redirect');
+    if (redirect && redirect.startsWith('/')) {
+      window.location.href = redirect;
+    } else {
+      window.location.href = '/lobby.html';
+    }
     return;
   }
 
@@ -39,7 +45,13 @@ document.addEventListener('DOMContentLoaded', () => {
         sfx.winFanfare();
         showToast(i18n.t('registerSuccess'), 'success');
         setTimeout(() => {
-          window.location.href = '/lobby.html';
+          const urlParams = new URLSearchParams(window.location.search);
+          const redirect = urlParams.get('redirect');
+          if (redirect && redirect.startsWith('/')) {
+            window.location.href = redirect;
+          } else {
+            window.location.href = '/lobby.html';
+          }
         }, 800);
       } catch (err) {
         sfx.errorBuzz();
@@ -61,7 +73,13 @@ document.addEventListener('DOMContentLoaded', () => {
         sfx.click();
         showToast(i18n.t('loginSuccess'), 'success');
         setTimeout(() => {
-          window.location.href = '/lobby.html';
+          const urlParams = new URLSearchParams(window.location.search);
+          const redirect = urlParams.get('redirect');
+          if (redirect && redirect.startsWith('/')) {
+            window.location.href = redirect;
+          } else {
+            window.location.href = '/lobby.html';
+          }
         }, 600);
       } catch (err) {
         sfx.errorBuzz();
@@ -80,7 +98,13 @@ document.addEventListener('DOMContentLoaded', () => {
         sfx.click();
         showToast(i18n.t('loginSuccess'), 'success');
         setTimeout(() => {
-          window.location.href = '/lobby.html';
+          const urlParams = new URLSearchParams(window.location.search);
+          const redirect = urlParams.get('redirect');
+          if (redirect && redirect.startsWith('/')) {
+            window.location.href = redirect;
+          } else {
+            window.location.href = '/lobby.html';
+          }
         }, 500);
       } catch (err) {
         sfx.errorBuzz();

@@ -25,15 +25,11 @@ const GAME_PLAYERS_CONFIG = {
 document.addEventListener('DOMContentLoaded', async () => {
   ui.setupGlobalNav();
 
-  // Ensure user is authenticated (auto-create guest if visiting directly!)
+  // Ensure user is authenticated
   let token = api.getToken();
   if (!token) {
-    try {
-      await api.guest();
-      ui.renderHeaderUser();
-    } catch (e) {
-      console.warn('Auto guest creation failed:', e);
-    }
+    window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
+    return;
   }
 
   // Load and render open rooms
@@ -189,7 +185,7 @@ function setupLobbyEvents() {
           submitBtn.textContent = '✅ تم إنشاء الغرفة!';
         }
         sfx.winFanfare();
-        window.location.href = `/room.html?id=${res.room.id}`;
+        window.location.href = `/room/${res.room.id}`;
       } catch (err) {
         if (submitBtn) {
           submitBtn.disabled = false;
@@ -223,7 +219,7 @@ function setupLobbyEvents() {
 async function joinRoomByCode(code) {
   try {
     const res = await api.joinRoom(code);
-    window.location.href = `/room.html?id=${res.room.id}`;
+    window.location.href = `/room/${res.room.id}`;
   } catch (err) {
     sfx.errorBuzz();
     showToast(err.message, 'error');

@@ -81,8 +81,10 @@ export function renderUNO(state, options = {}) {
   const opponents = state.players.filter(p => p.id !== myId);
   const selectedCardId = options.selectedCardId || null;
 
+  const mySkin = state.room?.players?.find(p => p.id === myId)?.preferences?.gameSkins?.uno || 'default';
+
   return `
-    <div class="game-container uno-game-container">
+    <div class="game-container uno-game-container skin-${mySkin}">
       <!-- Game Header / Turn & Active Color -->
       <div class="game-header">
         <div class="active-color-pill color-${state.currentColor || 'red'}">

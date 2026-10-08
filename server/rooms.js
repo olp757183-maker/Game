@@ -59,6 +59,7 @@ export class Room {
       existing.connected = true;
       existing.username = user.username;
       existing.avatar = user.avatar;
+      existing.preferences = user.preferences || {};
       return existing;
     }
 
@@ -80,6 +81,7 @@ export class Room {
       username: user.username,
       avatar: user.avatar,
       isGuest: user.isGuest,
+      preferences: user.preferences || {},
       seat,
       isHost,
       connected: true,
@@ -278,6 +280,7 @@ export class Room {
         id: p.id,
         username: p.username,
         avatar: p.avatar,
+        preferences: p.preferences || {},
         seat: p.seat,
         isHost: p.isHost,
         connected: p.connected,

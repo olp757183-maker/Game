@@ -33,8 +33,9 @@ const socketRoomMap = new Map();
 export function setupSocketServer(httpServer) {
   const io = new Server(httpServer, {
     cors: {
-      origin: '*',
-      methods: ['GET', 'POST']
+      origin: process.env.CORS_ORIGIN || '*',
+      methods: ['GET', 'POST', 'PUT', 'DELETE'],
+      credentials: true
     }
   });
 
@@ -255,6 +256,39 @@ export function setupSocketServer(httpServer) {
         broadcastRoomState(room);
       } catch (err) {
         socket.emit(SOCKET_EVENTS.ERROR, { messageEn: err.message, messageAr: err.message });
+      }
+    });
+
+    // Update Player Skin (Phase 5)
+    socket.on('player:skin:update', async ({ gameType, skin }) => {
+      try {
+        // Save to DB
+        const profile = users.getUserProfile(user.id);
+        const prefs = profile.preferences || {};
+        prefs.gameSkins = prefs.gameSkins || {};
+        prefs.gameSkins[gameType] = skin;
+        users.updateProfile(user.id, { preferences: prefs });
+
+        // Update in-memory user reference
+        user.preferences = prefs;
+
+        // Broadcast to current room
+        const roomId = socketRoomMap.get(socket.id);
+        if (roomId) {
+          const room = rooms.getRoomById(roomId);
+          if (room) {
+             io.to(`room:${room.id}`).emit('player:skin:updated', {
+               playerId: user.id,
+               gameType,
+               skin,
+               username: user.username,
+               avatar: user.avatar
+             });
+             broadcastRoomState(room); // Optional, if state relies on it
+          }
+        }
+      } catch (err) {
+        socket.emit(SOCKET_EVENTS.ERROR, { messageEn: err.message, messageAr: 'خطأ في تحديث الشكل' });
       }
     });
 

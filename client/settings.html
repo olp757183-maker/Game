@@ -62,6 +62,16 @@
           <button id="sound-off-btn" class="btn btn-outline" style="flex: 1;">🔇 كتم الصوت</button>
         </div>
       </div>
+
+      <!-- Game Skins Setting -->
+      <div class="form-group" style="margin-bottom: 2rem; border-top: 1px solid var(--border); padding-top: 2rem;">
+        <label class="form-label">أشكال الورق - UNO Skins:</label>
+        <div style="display: flex; gap: 1rem; margin-top: 0.5rem;" id="uno-skins-container">
+          <button class="btn btn-outline skin-btn active" data-game="uno" data-skin="default" style="flex: 1;">الأساسي (Default)</button>
+          <button class="btn btn-outline skin-btn" data-game="uno" data-skin="dark" style="flex: 1;">الداكن (Dark Cards)</button>
+          <button class="btn btn-outline skin-btn" data-game="uno" data-skin="neon" style="flex: 1;">نيون (Neon)</button>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -70,12 +80,20 @@
   </footer>
 
   <script type="module">
+    import api from './js/api.js';
     import ui from './js/ui.js';
     import i18n from './js/language.js';
     import { sfx, showToast } from './js/utils.js';
+    import socket from './js/socket.js';
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       ui.setupGlobalNav();
+
+      const user = api.getUser();
+      if (!user) {
+        window.location.href = '/login.html?redirect=/settings.html';
+        return;
+      }
 
       // Language Buttons
       document.getElementById('lang-ar-btn')?.addEventListener('click', () => {
@@ -106,6 +124,58 @@
       document.getElementById('sound-off-btn')?.addEventListener('click', () => {
         sfx.toggleSound(false);
         showToast('Sound muted', 'info');
+      });
+
+      // Load user skins
+      try {
+        const fullProfile = await api.getMe();
+        const unoSkin = fullProfile.preferences?.gameSkins?.uno || 'default';
+        document.querySelectorAll('.skin-btn[data-game="uno"]').forEach(btn => {
+          if (btn.getAttribute('data-skin') === unoSkin) {
+            btn.classList.add('active');
+            btn.classList.replace('btn-outline', 'btn-primary');
+          } else {
+            btn.classList.remove('active');
+            btn.classList.replace('btn-primary', 'btn-outline');
+          }
+        });
+      } catch (e) {
+        console.error('Failed to load profile for skins', e);
+      }
+
+      // Skin Buttons
+      document.querySelectorAll('.skin-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const game = btn.getAttribute('data-game');
+          const skin = btn.getAttribute('data-skin');
+          
+          try {
+            // Optimistic UI
+            document.querySelectorAll(`.skin-btn[data-game="${game}"]`).forEach(b => {
+              b.classList.remove('active');
+              b.classList.replace('btn-primary', 'btn-outline');
+            });
+            btn.classList.add('active');
+            btn.classList.replace('btn-outline', 'btn-primary');
+
+            const fullProfile = await api.getMe();
+            const prefs = fullProfile.preferences || {};
+            prefs.gameSkins = prefs.gameSkins || {};
+            prefs.gameSkins[game] = skin;
+
+            await api.updateProfile({ preferences: prefs });
+            showToast('تم حفظ الشكل (Skin Saved)', 'success');
+            sfx.winFanfare();
+
+            // Broadcast if socket is connected
+            if (socket && typeof socket.emit === 'function') {
+               socket.emit('player:skin:update', { gameType: game, skin });
+            }
+          } catch (err) {
+            showToast(err.message, 'error');
+            sfx.errorBuzz();
+          }
+        });
       });
     });
   </script>

@@ -311,6 +311,7 @@
   transform: translateY(-16px) scale(1.05);
   z-index: 15;
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
+}
 .playing-card.selected {
   transform: translateY(-26px) scale(1.08) !important;
   border-color: #facc15 !important;

@@ -38,10 +38,23 @@ export class ChessClient {
     this.actionInFlight = false;
     if (this.actionTimeout) clearTimeout(this.actionTimeout);
 
-    const isMyTurn = (this.state.myPlayerId === this.state.currentTurn) ||
-                     (this.state.myPlayerId === this.state.currentTurnPlayerId) ||
-                     (this.state.myColor === this.state.currentTurnColor) ||
-                     (this.state.myColor === this.state.currentTurn);
+    // Ensure myColor is ALWAYS known!
+    const myId = this.state.myPlayerId;
+    if (!this.state.myColor || this.state.myColor === 'spectator') {
+      const me = this.state.players?.find(p => p.id === myId);
+      if (me && me.color) {
+        this.state.myColor = me.color;
+      }
+    }
+
+    const turnColor = this.state.currentTurnColor ||
+      (this.state.currentTurn === 'w' || this.state.currentTurn === 'b'
+        ? this.state.currentTurn
+        : (this.state.players?.find(p => p.id === this.state.currentTurn)?.color) || 'w');
+
+    const isMyTurn = (this.state.myColor && this.state.myColor === turnColor) ||
+                     (myId && myId === this.state.currentTurnPlayerId) ||
+                     (myId && myId === this.state.currentTurn);
 
     if (isMyTurn && prevTurn !== this.state.currentTurn) {
       sfx.turnAlert();
@@ -110,11 +123,29 @@ export class ChessClient {
   }
 
   handleSquareClick(r, c) {
-    const isMyTurn = (this.state.myPlayerId === this.state.currentTurn) ||
-                     (this.state.myPlayerId === this.state.currentTurnPlayerId) ||
-                     (this.state.myColor === this.state.currentTurnColor) ||
-                     (this.state.myColor === this.state.currentTurn);
-    if (!isMyTurn || this.actionInFlight) return;
+    const myId = this.state.myPlayerId;
+    if (!this.state.myColor || this.state.myColor === 'spectator') {
+      const me = this.state.players?.find(p => p.id === myId);
+      if (me && me.color) {
+        this.state.myColor = me.color;
+      }
+    }
+
+    const turnColor = this.state.currentTurnColor ||
+      (this.state.currentTurn === 'w' || this.state.currentTurn === 'b'
+        ? this.state.currentTurn
+        : (this.state.players?.find(p => p.id === this.state.currentTurn)?.color) || 'w');
+
+    const isMyTurn = (this.state.myColor && this.state.myColor === turnColor) ||
+                     (myId && myId === this.state.currentTurnPlayerId) ||
+                     (myId && myId === this.state.currentTurn);
+
+    if (this.actionInFlight) return;
+
+    if (!isMyTurn) {
+      showToast('ليس دورك الآن (انتظر دور الخصم)', 'warning');
+      return;
+    }
 
     const piece = this.state.board[r]?.[c];
 
@@ -168,16 +199,27 @@ export class ChessClient {
     }
 
     // No piece selected yet: clicking own piece selects it and highlights destinations
-    if (piece && piece.color === this.state.myColor) {
-      this.selectedSquare = { row: r, col: c };
-      this.legalDestinations = this.computeLegalDestinations(r, c);
-      sfx.click();
-      this.render();
+    if (piece) {
+      if (piece.color === this.state.myColor) {
+        this.selectedSquare = { row: r, col: c };
+        this.legalDestinations = this.computeLegalDestinations(r, c);
+        sfx.click();
+        this.render();
+      } else {
+        showToast('لا يمكنك تحريك قطع الخصم', 'warning');
+      }
     }
   }
 
   computeLegalDestinations(r, c) {
     if (!this.state?.board) return [];
+    const myId = this.state.myPlayerId;
+    if (!this.state.myColor || this.state.myColor === 'spectator') {
+      const me = this.state.players?.find(p => p.id === myId);
+      if (me && me.color) {
+        this.state.myColor = me.color;
+      }
+    }
     const board = this.state.board;
     const piece = board[r]?.[c];
     if (!piece || piece.color !== this.state.myColor) return [];

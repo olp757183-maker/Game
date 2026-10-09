@@ -5,7 +5,7 @@
 class SoundEffects {
   constructor() {
     this.audioCtx = null;
-    this.enabled = localStorage.getItem('sound_enabled') !== 'false';
+    this.enabled = typeof localStorage !== 'undefined' ? localStorage.getItem('sound_enabled') !== 'false' : true;
   }
 
   init() {
@@ -20,7 +20,9 @@ class SoundEffects {
 
   toggleSound(enable) {
     this.enabled = enable !== undefined ? enable : !this.enabled;
-    localStorage.setItem('sound_enabled', this.enabled ? 'true' : 'false');
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('sound_enabled', this.enabled ? 'true' : 'false');
+    }
     return this.enabled;
   }
 

@@ -11,14 +11,16 @@ const DEFAULT_LANG = 'ar'; // Default language Arabic or English
 
 class LanguageManager {
   constructor() {
-    this.currentLang = localStorage.getItem('app_lang') || DEFAULT_LANG;
+    this.currentLang = (typeof localStorage !== 'undefined') ? (localStorage.getItem('app_lang') || DEFAULT_LANG) : DEFAULT_LANG;
     this.applyLanguage(this.currentLang);
   }
 
   setLanguage(lang) {
     if (!TRANSLATIONS[lang]) return;
     this.currentLang = lang;
-    localStorage.setItem('app_lang', lang);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('app_lang', lang);
+    }
     this.applyLanguage(lang);
   }
 
@@ -32,7 +34,9 @@ class LanguageManager {
   }
 
   applyLanguage(lang) {
+    if (typeof document === 'undefined') return;
     const html = document.documentElement;
+    if (!html) return;
     html.setAttribute('lang', lang);
     html.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
 

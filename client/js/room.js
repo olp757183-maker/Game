@@ -79,9 +79,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   socket.on(SOCKET_EVENTS.GAME_STATE, (gameData) => {
     if (!gameData) return;
-    currentGameData = gameData;
     const user = api.getUser() || {};
     gameData.myPlayerId = gameData.myPlayerId || user.id;
+
+    // Ensure Chess color is derived if missing
+    if (currentRoomData && currentRoomData.gameType === 'chess' && (!gameData.myColor || gameData.myColor === 'spectator')) {
+      const me = gameData.players?.find(p => p.id === gameData.myPlayerId);
+      if (me && me.color) {
+        gameData.myColor = me.color;
+      }
+    }
+
+    // Preserve private fields from previous game data if incoming is partial
+    if (currentGameData && currentGameData.gameId === gameData.gameId) {
+      if ((!gameData.myHand || gameData.myHand.length === 0) && currentGameData.myHand && currentGameData.myHand.length > 0) {
+        gameData.myHand = currentGameData.myHand;
+      }
+      if ((!gameData.myColor || gameData.myColor === 'spectator') && currentGameData.myColor && currentGameData.myColor !== 'spectator') {
+        gameData.myColor = currentGameData.myColor;
+      }
+    }
+
+    currentGameData = gameData;
+
+    // Instantly initialize game client if stage exists and room is playing
+    const stage = document.getElementById('game-stage-container');
+    if (currentRoomData && currentRoomData.status === 'PLAYING' && stage) {
+      if (!currentGameClient || activeGameType !== currentRoomData.gameType) {
+        activeGameType = currentRoomData.gameType;
+        currentGameClient = createGameClient(currentRoomData.gameType, stage, currentRoomData.id);
+      }
+    }
 
     if (currentRoomData && currentGameClient) {
       try {
@@ -105,7 +133,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   socket.on('room:public-state', (data) => {
     if (data && data.room) {
-      const effectiveGame = data.game || currentGameData || null;
+      // Prioritize player's own personalized game state so public channel state does not strip private cards/color
+      const effectiveGame = (currentGameData && (!data.game || data.game.gameId === currentGameData.gameId))
+        ? currentGameData
+        : (currentGameData || data.game || null);
       handleRoomState({ room: data.room, game: effectiveGame });
     }
   });
@@ -264,9 +295,43 @@ function handleRoomState(data) {
 
   currentRoomData = room;
   if (game) {
+    // If incoming game packet lacks private fields (e.g. from public broadcast), preserve them!
+    if (currentGameData && (currentGameData.gameId === game.gameId || !game.gameId)) {
+      if ((!game.myHand || game.myHand.length === 0) && currentGameData.myHand && currentGameData.myHand.length > 0) {
+        game.myHand = currentGameData.myHand;
+      }
+      if ((!game.myColor || game.myColor === 'spectator') && currentGameData.myColor && currentGameData.myColor !== 'spectator') {
+        game.myColor = currentGameData.myColor;
+      }
+      if (!game.myPlayerId && currentGameData.myPlayerId) {
+        game.myPlayerId = currentGameData.myPlayerId;
+      }
+    }
     currentGameData = game;
   }
   const effectiveGame = game || currentGameData || null;
+
+  const user = api.getUser() || {};
+  const amHost = (serverIsHost !== undefined) ? serverIsHost : (room.hostId === user.id);
+  const myId = myPlayerId || user.id;
+
+  // Ensure effectiveGame has all essential player-specific identifiers
+  if (effectiveGame) {
+    effectiveGame.myPlayerId = effectiveGame.myPlayerId || myId;
+
+    if (room.gameType === 'chess') {
+      if (!effectiveGame.myColor || effectiveGame.myColor === 'spectator') {
+        const me = effectiveGame.players?.find(p => p.id === myId);
+        if (me && me.color) {
+          effectiveGame.myColor = me.color;
+        }
+      }
+    } else if (room.gameType === 'uno' || room.gameType === 'domino') {
+      if (!Array.isArray(effectiveGame.myHand)) {
+        effectiveGame.myHand = (currentGameData?.myHand && Array.isArray(currentGameData.myHand)) ? currentGameData.myHand : [];
+      }
+    }
+  }
 
   if (window.DEBUG_GAME) {
     console.log('[GAME STATE UPDATE]');

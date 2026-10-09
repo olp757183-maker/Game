@@ -174,10 +174,12 @@ async function main() {
   });
 
   await runTest('Turn System: Legal Turn Action & Deck Draw', () => {
+    unoGameInstance.pendingDraw = 0;
     const current = unoGameInstance.getCurrentPlayer();
+    const prevCount = current.hand.length;
     const result = unoGameInstance.handleAction(current.id, { type: 'DRAW_CARD' });
     assert.strictEqual(result.success, true);
-    assert.strictEqual(current.hand.length, 8); // Drew 1 card
+    assert.strictEqual(current.hand.length, prevCount + 1); // Drew 1 card
   });
 
   // 5. CHESS GAME ENGINE

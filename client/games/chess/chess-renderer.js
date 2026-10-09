@@ -7,7 +7,7 @@ import { escapeHtml, formatTime } from '../../js/utils.js';
 import i18n from '../../js/language.js';
 
 export const PIECE_SYMBOLS = {
-  w: { k: '♔', q: '♕', r: '♖', b: '♗', n: '♘', p: '♙' },
+  w: { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' },
   b: { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' }
 };
 
@@ -63,21 +63,30 @@ export function renderChessSquares(state, options = {}) {
 }
 
 export function renderChess(state, options = {}) {
-  if (window.DEBUG_GAME) {
+  if (typeof window !== 'undefined' && window.DEBUG_GAME) {
     console.log('[RENDER] Rendering Chess', state);
   }
 
   if (!state) return '<div class="game-loading">جاري تحميل لوحة الشطرنج...</div>';
 
-  const myColor = state.myColor;
+  const myId = state.myPlayerId;
+  let myColor = state.myColor;
+  if (!myColor || myColor === 'spectator') {
+    const me = state.players?.find(p => p.id === myId);
+    if (me && me.color) {
+      myColor = me.color;
+      state.myColor = me.color;
+    }
+  }
+
   const isFlipped = (myColor === 'b');
   const turnColor = state.currentTurnColor || (state.currentTurn === 'w' || state.currentTurn === 'b' ? state.currentTurn : (state.players?.find(p => p.id === state.currentTurn)?.color) || 'w');
-  const isMyTurn = (state.myPlayerId === state.currentTurn) || (state.myPlayerId === state.currentTurnPlayerId) || (myColor === turnColor);
+  const isMyTurn = (myColor && myColor === turnColor) || (myId && myId === state.currentTurnPlayerId) || (myId && myId === state.currentTurn);
   const selectedSquare = options.selectedSquare || null;
   const legalDestinations = options.legalDestinations || [];
 
-  const whitePlayer = state.players.find(p => p.color === 'w') || { username: 'White', timeLeft: 300 };
-  const blackPlayer = state.players.find(p => p.color === 'b') || { username: 'Black', timeLeft: 300 };
+  const whitePlayer = state.players?.find(p => p.color === 'w') || { username: 'White', timeLeft: 300 };
+  const blackPlayer = state.players?.find(p => p.color === 'b') || { username: 'Black', timeLeft: 300 };
 
   const topPlayer = isFlipped ? whitePlayer : blackPlayer;
   const bottomPlayer = isFlipped ? blackPlayer : whitePlayer;

@@ -7,6 +7,8 @@ import { escapeHtml } from '../../js/utils.js';
 import i18n from '../../js/language.js';
 
 export function renderPips(num) {
+  const n = parseInt(num, 10);
+  if (isNaN(n) || n < 0) return '';
   const pipLayouts = {
     0: '',
     1: '<div class="pip center"></div>',
@@ -16,33 +18,41 @@ export function renderPips(num) {
     5: '<div class="pip top-left"></div><div class="pip top-right"></div><div class="pip center"></div><div class="pip bottom-left"></div><div class="pip bottom-right"></div>',
     6: '<div class="pip top-left"></div><div class="pip top-right"></div><div class="pip mid-left"></div><div class="pip mid-right"></div><div class="pip bottom-left"></div><div class="pip bottom-right"></div>'
   };
-  return `<div class="pips-grid pips-${num}">${pipLayouts[num] || ''}</div>`;
+  return `<div class="pips-grid pips-${n}">${pipLayouts[n] || ''}</div>`;
 }
 
 export function renderBoardTile(tile) {
+  if (!tile) return '';
+  const leftVal = tile.placedLeft !== undefined ? tile.placedLeft : (tile.left !== undefined ? tile.left : 0);
+  const rightVal = tile.placedRight !== undefined ? tile.placedRight : (tile.right !== undefined ? tile.right : 0);
   return `
-    <div class="domino-tile board-tile ${tile.isDouble ? 'tile-double' : ''}" title="Domino [${tile.placedLeft}|${tile.placedRight}]">
-      <div class="tile-half half-top">${renderPips(tile.placedLeft)}</div>
+    <div class="domino-tile board-tile ${tile.isDouble ? 'tile-double' : ''}" data-left="${leftVal}" data-right="${rightVal}" title="Domino [${leftVal}|${rightVal}]">
+      <div class="tile-half half-top">${renderPips(leftVal)}</div>
       <div class="tile-divider"></div>
-      <div class="tile-half half-bottom">${renderPips(tile.placedRight)}</div>
+      <div class="tile-half half-bottom">${renderPips(rightVal)}</div>
     </div>
   `;
 }
 
 export function renderHandTile(tile, isMyTurn, isSelected = false) {
+  if (!tile) return '';
+  const leftVal = tile.left !== undefined ? tile.left : 0;
+  const rightVal = tile.right !== undefined ? tile.right : 0;
   return `
     <div class="domino-tile hand-tile ${isSelected ? 'selected' : ''}"
-         data-id="${tile.id}"
-         title="Tile [${tile.left}|${tile.right}]">
-      <div class="tile-half half-top">${renderPips(tile.left)}</div>
+         data-id="${tile.id || ''}"
+         data-left="${leftVal}"
+         data-right="${rightVal}"
+         title="Tile [${leftVal}|${rightVal}]">
+      <div class="tile-half half-top">${renderPips(leftVal)}</div>
       <div class="tile-divider"></div>
-      <div class="tile-half half-bottom">${renderPips(tile.right)}</div>
+      <div class="tile-half half-bottom">${renderPips(rightVal)}</div>
     </div>
   `;
 }
 
 export function renderDomino(state, options = {}) {
-  if (window.DEBUG_GAME) {
+  if (typeof window !== 'undefined' && window.DEBUG_GAME) {
     console.log('[RENDER] Rendering Domino', state);
   }
 

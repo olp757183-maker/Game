@@ -34,6 +34,13 @@ export class DominoClient {
     this.actionInFlight = false;
     if (this.actionTimeout) clearTimeout(this.actionTimeout);
 
+    if (!Array.isArray(this.state.myHand)) {
+      this.state.myHand = [];
+    }
+    if (!Array.isArray(this.state.board)) {
+      this.state.board = [];
+    }
+
     const myId = this.state.myPlayerId;
     if (this.state.currentTurnPlayerId === myId && prevTurn !== myId) {
       sfx.turnAlert();

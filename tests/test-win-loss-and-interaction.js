@@ -65,8 +65,11 @@ async function runTests() {
     }, /ليس دورك الآن|البطاقة غير موجودة|الورقة غير موجودة/);
 
     // Give active player a guaranteed matching card
+    game.pendingDraw = 0;
     const top = game.getTopDiscard();
-    activePlayer.hand[0] = { id: 'guaranteed_card', color: top.color, value: '5', score: 5 };
+    const activeColor = (game.currentColor && game.currentColor !== 'wild') ? game.currentColor : 'red';
+    game.currentColor = activeColor;
+    activePlayer.hand[0] = { id: 'guaranteed_card', color: activeColor, value: '5', score: 5 };
 
     const playRes = game.handleAction(activePlayer.id, {
       type: 'PLAY_CARD',

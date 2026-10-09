@@ -34,6 +34,10 @@ export class UnoClient {
     this.actionInFlight = false;
     if (this.actionTimeout) clearTimeout(this.actionTimeout);
 
+    if (!Array.isArray(this.state.myHand)) {
+      this.state.myHand = [];
+    }
+
     const myId = this.state.myPlayerId;
     if (gameState.currentTurnPlayerId === myId && previousTurn !== myId) {
       sfx.turnAlert();
@@ -68,7 +72,7 @@ export class UnoClient {
       el.addEventListener('click', () => {
         if (this.actionInFlight) return;
         const cardId = el.getAttribute('data-id');
-        const card = this.state.myHand.find(c => c.id === cardId);
+        const card = this.state.myHand?.find(c => c.id === cardId);
         if (!card) return;
 
         if (!isMyTurn) {

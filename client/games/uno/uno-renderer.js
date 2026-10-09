@@ -27,8 +27,10 @@ export function renderUnoCard(card, options = {}) {
 
   if (!card) return '';
 
-  const symbol = getUnoSymbol(card.value);
-  const colorClass = `card-${card.color}`;
+  const color = card.color || 'red';
+  const val = card.value !== undefined ? card.value : '0';
+  const symbol = getUnoSymbol(val);
+  const colorClass = `card-${color}`;
 
   const classes = [
     'uno-card',
@@ -39,10 +41,10 @@ export function renderUnoCard(card, options = {}) {
 
   return `
     <div class="${classes}"
-         data-id="${card.id}"
-         data-color="${card.color}"
-         data-value="${card.value}"
-         title="${card.color.toUpperCase()} ${card.value}">
+         data-id="${card.id || ''}"
+         data-color="${color}"
+         data-value="${val}"
+         title="${color.toUpperCase()} ${val}">
       <div class="uno-card-inner">
         <span class="uno-corner top-left">${symbol}</span>
         <div class="uno-card-oval">
@@ -70,7 +72,7 @@ export function renderUnoCardBack(options = {}) {
 }
 
 export function renderUNO(state, options = {}) {
-  if (window.DEBUG_GAME) {
+  if (typeof window !== 'undefined' && window.DEBUG_GAME) {
     console.log('[RENDER] Rendering UNO', state);
   }
 

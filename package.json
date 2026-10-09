@@ -1,7 +1,7 @@
 {
   "name": "classic-games",
   "version": "1.0.0",
-  "description": "Real-time multiplayer classic games platform (UNO, Baloot, Chess, Domino, Cards)",
+  "description": "Real-time multiplayer classic games platform (UNO, Chess, Domino)",
   "main": "server/server.js",
   "type": "module",
   "scripts": {
@@ -16,10 +16,8 @@
     "multiplayer",
     "games",
     "uno",
-    "baloot",
     "chess",
     "domino",
-    "cards",
     "socket.io",
     "express"
   ],

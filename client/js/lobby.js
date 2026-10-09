@@ -18,10 +18,8 @@ let activeGameFilter = 'all';
 // Allowed players range per game
 const GAME_PLAYERS_CONFIG = {
   uno: { min: 2, max: 8, options: [2, 3, 4, 6, 8], default: 4 },
-  baloot: { min: 4, max: 4, options: [4], default: 4 },
   chess: { min: 2, max: 2, options: [2], default: 2 },
-  domino: { min: 2, max: 4, options: [2, 3, 4], default: 4 },
-  cards: { min: 2, max: 6, options: [2, 3, 4, 6], default: 4 }
+  domino: { min: 2, max: 4, options: [2, 3, 4], default: 4 }
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -428,50 +426,6 @@ function updateRulesEditorFields(gameType) {
         </div>
       </div>
     `;
-  } else if (gameType === 'baloot') {
-    container.innerHTML = `
-      <div class="rules-accordion">
-        <div class="accordion-item open">
-          <button type="button" class="accordion-header">
-            <span>🃏 إعدادات البلوت (Baloot Rules)</span>
-            <span class="accordion-icon">▼</span>
-          </button>
-          <div class="accordion-content">
-            <div class="form-group">
-              <label class="form-label">نهاية النشرة (Target Score):</label>
-              <select id="rule-target-score" class="form-control">
-                <option value="152" selected>152 نقطة (نشرة رسمية)</option>
-                <option value="100">100 نقطة (سريعة)</option>
-                <option value="200">200 نقطة (طويلة)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  } else if (gameType === 'cards') {
-    container.innerHTML = `
-      <div class="rules-accordion">
-        <div class="accordion-item open">
-          <button type="button" class="accordion-header">
-            <span>♠️ قواعد لعبة الشدة (Cards / Batta)</span>
-            <span class="accordion-icon">▼</span>
-          </button>
-          <div class="accordion-content">
-            <div class="form-group">
-              <label class="form-label">أوراق البداية في يد كل لاعب:</label>
-              <input type="number" id="rule-starting-cards" class="form-control" min="3" max="10" value="${defaults.startingCards}">
-            </div>
-            <div class="form-group">
-              <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                <input type="checkbox" id="rule-special-cards" ${defaults.specialCards ? 'checked' : ''}>
-                <span>تفعيل كروت القوة الخاصة (2 يسحب، 8 يغير اللون، A يتخطى، J يعكس)</span>
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
   }
 
   // Setup accordion toggle listeners
@@ -499,11 +453,6 @@ function collectRulesFromForm(gameType) {
   } else if (gameType === 'domino') {
     rules.startingTiles = parseInt(document.getElementById('rule-starting-tiles')?.value || '7', 10);
     rules.targetScore = parseInt(document.getElementById('rule-target-score')?.value || '100', 10);
-  } else if (gameType === 'baloot') {
-    rules.targetScore = parseInt(document.getElementById('rule-target-score')?.value || '152', 10);
-  } else if (gameType === 'cards') {
-    rules.startingCards = parseInt(document.getElementById('rule-starting-cards')?.value || '5', 10);
-    rules.specialCards = document.getElementById('rule-special-cards')?.checked ?? true;
   }
   return rules;
 }

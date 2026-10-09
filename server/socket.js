@@ -15,15 +15,11 @@ import { sanitizeChatMessage } from '../shared/validation.js';
 import UnoGame from './games/uno.js';
 import ChessGame from './games/chess.js';
 import DominoGame from './games/domino.js';
-import BalootGame from './games/baloot.js';
-import CardsGame from './games/cards.js';
 
 const GAME_ENGINES = {
   uno: UnoGame,
   chess: ChessGame,
-  domino: DominoGame,
-  baloot: BalootGame,
-  cards: CardsGame
+  domino: DominoGame
 };
 
 // Map of userId -> Set of socket IDs

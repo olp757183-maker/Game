@@ -5,10 +5,8 @@
 
 export const GAME_TYPES = {
   UNO: 'uno',
-  BALOOT: 'baloot',
   CHESS: 'chess',
-  DOMINO: 'domino',
-  CARDS: 'cards'
+  DOMINO: 'domino'
 };
 
 export const GAME_INFO = {
@@ -21,16 +19,6 @@ export const GAME_INFO = {
     defaultPlayers: 4,
     descriptionEn: 'The world-famous card shedding game with action cards and wild colors.',
     descriptionAr: 'لعبة البطاقات الشهيرة القائمة على التخلص من الأوراق وبطاقات الحركة والألوان.'
-  },
-  [GAME_TYPES.BALOOT]: {
-    id: 'baloot',
-    nameEn: 'Baloot',
-    nameAr: 'بلوت',
-    minPlayers: 4,
-    maxPlayers: 4,
-    defaultPlayers: 4,
-    descriptionEn: 'The premier 4-player Arabian trick-taking game with Sun and Hokom bidding.',
-    descriptionAr: 'لعبة الورق الشعبية الخليجية الأشهر لأربعة لاعبين وفريقين بنظام الصن والحكم.'
   },
   [GAME_TYPES.CHESS]: {
     id: 'chess',
@@ -51,16 +39,6 @@ export const GAME_INFO = {
     defaultPlayers: 2,
     descriptionEn: 'Classic double-six domino matching game with drawing, blocking, and rounds.',
     descriptionAr: 'لعبة الدومينو الكلاسيكية المزدوجة الستة مع سحب الأحجار والتسكير وحساب النقاط.'
-  },
-  [GAME_TYPES.CARDS]: {
-    id: 'cards',
-    nameEn: 'Cards / Batta',
-    nameAr: 'بطّة / شِدّة',
-    minPlayers: 2,
-    maxPlayers: 6,
-    defaultPlayers: 4,
-    descriptionEn: 'Customizable card game engine with shedding, suit-matching, and special power cards.',
-    descriptionAr: 'محرك ألعاب ورق كلاسيكية مع إمكانية التخصيص الكامل للتخلص من الأوراق والحركات الخاصة.'
   }
 };
 
@@ -189,22 +167,4 @@ export const CHESS_PIECES = {
   ROOK: 'r',
   QUEEN: 'q',
   KING: 'k'
-};
-
-export const BALOOT_SUITS = {
-  SPADES: 'spades',     // سبيت
-  HEARTS: 'hearts',     // هاص
-  DIAMONDS: 'diamonds', // ديمن
-  CLUBS: 'clubs'        // كبة
-};
-
-export const BALOOT_BIDS = {
-  PASS: 'pass',         // بس
-  SUN: 'sun',           // صن
-  HOKOM: 'hokom',       // حكم
-  ASHKAL: 'ashkal',     // أشكال (في الصن فقط من اللاعب الثاني أو الرابع)
-  DOUBLE: 'double',     // دبل
-  THREE: 'three',       // ثري
-  FOUR: 'four',         // أربعة
-  GAHWA: 'gahwa'        // قهوة
 };

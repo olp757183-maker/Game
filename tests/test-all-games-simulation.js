@@ -142,60 +142,11 @@ async function testAllGamesSimulation() {
     socketB.disconnect();
   }
 
-  // 3. BALOOT REAL-TIME MULTIPLAYER (4 Players, 2 Teams)
-  console.log('\n--- 3. Testing Baloot Real-Time Multiplayer (4 Players) ---');
+  // 3. UNO REAL-TIME MULTIPLAYER
+  console.log('\n--- 3. Testing UNO Real-Time Multiplayer ---');
   {
-    const u1 = users.createGuest('BalootP1');
-    const u2 = users.createGuest('BalootP2');
-    const u3 = users.createGuest('BalootP3');
-    const u4 = users.createGuest('BalootP4');
-
-    const s1 = ClientIO(serverUrl, { auth: { token: auth.createSession(u1.id) } });
-    const s2 = ClientIO(serverUrl, { auth: { token: auth.createSession(u2.id) } });
-    const s3 = ClientIO(serverUrl, { auth: { token: auth.createSession(u3.id) } });
-    const s4 = ClientIO(serverUrl, { auth: { token: auth.createSession(u4.id) } });
-
-    await Promise.all([
-      new Promise(r => s1.on('connect', r)),
-      new Promise(r => s2.on('connect', r)),
-      new Promise(r => s3.on('connect', r)),
-      new Promise(r => s4.on('connect', r))
-    ]);
-
-    const room = rooms.createRoom({ hostUser: u1, gameType: 'baloot', maxPlayers: 4 });
-    s1.emit(SOCKET_EVENTS.JOIN_ROOM, { roomId: room.id });
-    await new Promise(r => s1.once(SOCKET_EVENTS.ROOM_STATE, r));
-
-    for (const s of [s2, s3, s4]) {
-      const statePromise = new Promise(r => s1.once(SOCKET_EVENTS.ROOM_STATE, r));
-      s.emit(SOCKET_EVENTS.JOIN_ROOM, { code: room.code });
-      await statePromise;
-    }
-    console.log('  ✓ Baloot: All 4 players synchronized into 4 seats instantly');
-
-    s1.emit(SOCKET_EVENTS.START_GAME, { roomId: room.id });
-    const [bState1] = await Promise.all([
-      new Promise(r => s1.once(SOCKET_EVENTS.ROOM_STATE, r)),
-      new Promise(r => s2.once(SOCKET_EVENTS.ROOM_STATE, r)),
-      new Promise(r => s3.once(SOCKET_EVENTS.ROOM_STATE, r)),
-      new Promise(r => s4.once(SOCKET_EVENTS.ROOM_STATE, r))
-    ]);
-    assert.strictEqual(bState1.room.status, 'PLAYING');
-    assert.strictEqual(bState1.game.status, 'BIDDING');
-    assert.ok(bState1.game.floorCard, 'Floor card dealt for bidding');
-    console.log('  ✓ Baloot: Bidding stage started, floor card visible to all players');
-
-    s1.disconnect();
-    s2.disconnect();
-    s3.disconnect();
-    s4.disconnect();
-  }
-
-  // 4. CARDS / BATTA REAL-TIME MULTIPLAYER
-  console.log('\n--- 4. Testing Cards / Batta Real-Time Multiplayer ---');
-  {
-    const userA = users.createGuest('CardsA');
-    const userB = users.createGuest('CardsB');
+    const userA = users.createGuest('UnoA');
+    const userB = users.createGuest('UnoB');
     const tokenA = auth.createSession(userA.id);
     const tokenB = auth.createSession(userB.id);
 
@@ -207,7 +158,7 @@ async function testAllGamesSimulation() {
       new Promise(r => socketB.on('connect', r))
     ]);
 
-    const room = rooms.createRoom({ hostUser: userA, gameType: 'cards', maxPlayers: 2 });
+    const room = rooms.createRoom({ hostUser: userA, gameType: 'uno', maxPlayers: 2 });
     socketA.emit(SOCKET_EVENTS.JOIN_ROOM, { roomId: room.id });
     await new Promise(r => socketA.once(SOCKET_EVENTS.ROOM_STATE, r));
 
@@ -216,17 +167,18 @@ async function testAllGamesSimulation() {
       new Promise(r => socketA.once(SOCKET_EVENTS.ROOM_STATE, r)),
       new Promise(r => socketB.once(SOCKET_EVENTS.ROOM_STATE, r))
     ]);
+    console.log('  ✓ UNO: Room joined by 2 players without refresh');
 
     socketA.emit(SOCKET_EVENTS.START_GAME, { roomId: room.id });
-    const [cStateA, cStateB] = await Promise.all([
+    const [unoStateA, unoStateB] = await Promise.all([
       new Promise(r => socketA.once(SOCKET_EVENTS.ROOM_STATE, r)),
       new Promise(r => socketB.once(SOCKET_EVENTS.ROOM_STATE, r))
     ]);
-    assert.strictEqual(cStateA.room.status, 'PLAYING');
-    assert.strictEqual(cStateA.game.myHand.length, 5);
-    assert.strictEqual(cStateB.game.myHand.length, 5);
-    assert.ok(cStateA.game.topDiscard, 'Top discard card on table');
-    console.log('  ✓ Cards: Game started, 5 cards dealt to each player, discard pile active');
+    assert.strictEqual(unoStateA.room.status, 'PLAYING');
+    assert.strictEqual(unoStateA.game.myHand.length, 7);
+    assert.strictEqual(unoStateB.game.myHand.length, 7);
+    assert.ok(unoStateA.game.topDiscard, 'Top discard card on table');
+    console.log('  ✓ UNO: Game started, 7 cards dealt to each player, discard pile active');
 
     socketA.disconnect();
     socketB.disconnect();
@@ -234,7 +186,7 @@ async function testAllGamesSimulation() {
 
   server.close();
   console.log('\n======================================================');
-  console.log(' ALL 5 GAMES REAL-TIME MULTIPLAYER TESTS PASSED! 🏆');
+  console.log(' ALL 3 ACTIVE GAMES REAL-TIME SIMULATION PASSED! 🏆');
   console.log('======================================================\n');
   process.exit(0);
 }

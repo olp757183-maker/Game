@@ -13,10 +13,9 @@ import assert from 'node:assert';
 import users from '../server/users.js';
 import rooms from '../server/rooms.js';
 import UnoGame from '../server/games/uno.js';
-import CardsGame from '../server/games/cards.js';
-import BalootGame from '../server/games/baloot.js';
 import ChessGame from '../server/games/chess.js';
 import DominoGame from '../server/games/domino.js';
+import { validateGameType } from '../shared/validation.js';
 import { GAME_STATUS } from '../shared/constants.js';
 
 let passedTests = 0;
@@ -197,98 +196,23 @@ async function runAllTests() {
   });
 
   // ==========================================
-  // 3. CARDS / BATTA TEST SUITE
   // ==========================================
-  console.log('\n--- 3. CARDS / BATTA ENGINE ---');
+  // 3. REMOVAL OF CARDS & BALOOT TESTS
+  // ==========================================
+  console.log('\n--- 3. REMOVED GAMES REGISTRY & SAFETY ---');
 
-  await test('Cards: Empty hand triggers round win, awards points, clean hand without isPlayable', () => {
-    const room = rooms.createRoom({
-      hostUser: user1,
-      gameType: 'cards',
-      maxPlayers: 2,
-      rules: { targetScore: 20 }
-    });
-    room.addPlayer(user2);
-    const game = room.startGame(user1.id, CardsGame);
-
-    assert.strictEqual(game.status, GAME_STATUS.PLAYING);
-    const p1State = game.getStateForPlayer(user1.id);
-    assert.strictEqual(p1State.myHand[0].isPlayable, undefined);
-
-    const activePlayer = game.getCurrentPlayer();
-    const otherPlayer = game.players.find(p => p.id !== activePlayer.id);
-
-    // Opponent has 2 cards (worth points)
-    otherPlayer.hand = [
-      { id: 'c_k1', suit: 'hearts', rank: 'K' }, // 10 pts
-      { id: 'c_q1', suit: 'hearts', rank: 'Q' }  // 10 pts
-    ];
-
-    // Active player plays matching last card
-    const top = game.getTopDiscard();
-    const winningCard = { id: 'c_win1', suit: game.activeSuit, rank: top.rank };
-    activePlayer.hand = [winningCard];
-
-    game.handleAction(activePlayer.id, {
-      type: 'PLAY_CARD',
-      cardId: winningCard.id
-    });
-
-    assert.strictEqual(activePlayer.hand.length, 0);
-    assert.strictEqual(game.status, GAME_STATUS.MATCH_END);
-    assert.strictEqual(game.winner, activePlayer.username);
+  await test('Game validation rejects Cards and Baloot', () => {
+    assert.strictEqual(validateGameType('cards').valid, false);
+    assert.strictEqual(validateGameType('baloot').valid, false);
   });
 
-  // ==========================================
-  // 4. BALOOT TEST SUITE
-  // ==========================================
-  console.log('\n--- 4. BALOOT ENGINE ---');
-
-  await test('Baloot: 4 players dealt 5 cards, bidding establishes contract, deals to 8 cards, clean state without isPlayable', () => {
-    const room = rooms.createRoom({ hostUser: user1, gameType: 'baloot', maxPlayers: 4 });
-    room.addPlayer(user2);
-    room.addPlayer(user3);
-    room.addPlayer(user4);
-    const game = room.startGame(user1.id, BalootGame);
-
-    assert.strictEqual(game.status, 'BIDDING');
-    const p1State = game.getStateForPlayer(user1.id);
-    assert.strictEqual(p1State.myHand[0].isPlayable, undefined);
-    assert.strictEqual(p1State.myHand.length, 5);
-
-    // First bidder bids Sun
-    const bidder = game.getCurrentPlayer();
-    game.handleAction(bidder.id, { type: 'BID', bid: 'sun' });
-
-    assert.strictEqual(game.status, 'PLAYING');
-    assert.strictEqual(game.contract.type, 'sun');
-    // All players now have 8 cards
-    game.players.forEach(p => assert.strictEqual(p.hand.length, 8));
-  });
-
-  await test('Baloot: Target score (152) triggers MATCH_END and declares winning team', () => {
-    const room = rooms.createRoom({
-      hostUser: user1,
-      gameType: 'baloot',
-      maxPlayers: 4,
-      rules: { targetScore: 10 }
-    });
-    room.addPlayer(user2);
-    room.addPlayer(user3);
-    room.addPlayer(user4);
-    const game = room.startGame(user1.id, BalootGame);
-
-    const bidder = game.getCurrentPlayer();
-    game.handleAction(bidder.id, { type: 'BID', bid: 'sun' });
-
-    // Simulate round finish with high points
-    game.teamAbnat = [100, 20];
-    game.finishRound();
-
-    // Since target is 10, team 0 won!
-    assert.strictEqual(game.status, GAME_STATUS.MATCH_END);
-    assert.ok(game.winner.includes('فريق 1'));
-    assert.strictEqual(game.reason, 'وصل إلى نقاط الفوز المطلوبة (10)');
+  await test('Room creation throws error for removed games Cards and Baloot', () => {
+    assert.throws(() => {
+      rooms.createRoom({ hostUser: user1, gameType: 'cards', maxPlayers: 2 });
+    }, /Unsupported|غير مدعوم/i);
+    assert.throws(() => {
+      rooms.createRoom({ hostUser: user1, gameType: 'baloot', maxPlayers: 4 });
+    }, /Unsupported|غير مدعوم/i);
   });
 
   // ==========================================

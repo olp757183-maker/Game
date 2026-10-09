@@ -15,14 +15,14 @@ export const en = {
 
   // Home Page
   heroTitle: "Classic Games — Play With Friends",
-  heroSubtitle: "Real-time multiplayer UNO, Baloot, Chess, Domino, and Cards right in your browser.",
+  heroSubtitle: "Real-time multiplayer UNO, Chess, and Domino right in your browser.",
   playNow: "Play Now",
   createRoom: "Create Room",
   joinRoom: "Join Room",
   featuredGames: "Featured Games",
   howItWorks: "How It Works",
   step1Title: "1. Choose a Game",
-  step1Desc: "Pick UNO, Baloot, Chess, Domino, or Classic Cards.",
+  step1Desc: "Pick UNO, Chess, or Domino.",
   step2Title: "2. Create a Room",
   step2Desc: "Customize turn timers, rules, and privacy mode.",
   step3Title: "3. Share Code",
@@ -116,21 +116,6 @@ export const en = {
   dominoPickSide: "Choose Side to Play",
   dominoLeft: "Play Left",
   dominoRight: "Play Right",
-
-  // Baloot Specific
-  balootSun: "Sun (صن)",
-  balootHokom: "Hokom (حكم)",
-  balootPass: "Pass (بس)",
-  balootAshkal: "Ashkal (أشكال)",
-  balootTeam1: "Team 1 (North/South)",
-  balootTeam2: "Team 2 (East/West)",
-  balootRound: "Round",
-  balootContract: "Contract",
-
-  // Cards / Batta
-  cardsDrawBtn: "Draw Card",
-  cardsPassBtn: "Pass Turn",
-  cardsSelectSuit: "Choose New Suit",
 
   // Rules Editor
   rulesGeneralTab: "General",

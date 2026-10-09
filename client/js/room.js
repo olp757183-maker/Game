@@ -14,8 +14,6 @@ import { SOCKET_EVENTS } from '../shared/constants.js';
 import UnoClient from '../games/uno/uno-client.js';
 import ChessClient from '../games/chess/chess-client.js';
 import DominoClient from '../games/domino/domino-client.js';
-import BalootClient from '../games/baloot/baloot-client.js';
-import CardsClient from '../games/cards/cards-client.js';
 
 window.DEBUG_GAME = true;
 
@@ -362,8 +360,6 @@ function createGameClient(gameType, container, roomId) {
     case 'uno': return new UnoClient(container, roomId);
     case 'chess': return new ChessClient(container, roomId);
     case 'domino': return new DominoClient(container, roomId);
-    case 'baloot': return new BalootClient(container, roomId);
-    case 'cards': return new CardsClient(container, roomId);
     default: return null;
   }
 }

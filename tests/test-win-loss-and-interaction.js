@@ -14,7 +14,7 @@ import rooms from '../server/rooms.js';
 import UnoGame from '../server/games/uno.js';
 import ChessGame from '../server/games/chess.js';
 import DominoGame from '../server/games/domino.js';
-import BalootGame from '../server/games/baloot.js';
+import { validateGameType } from '../shared/validation.js';
 import { GAME_STATUS, ERROR_CODES } from '../shared/constants.js';
 
 let passedCount = 0;
@@ -270,28 +270,16 @@ async function runTests() {
   });
 
   // ------------------------------------------------------------------
-  // 4. BALOOT TESTS
+  // 4. REGISTRY INTEGRITY: CARDS & BALOOT EXCLUSION
   // ------------------------------------------------------------------
-  console.log('--- 4. BALOOT: Target 152 Points & Team Winner Sync ---');
+  console.log('--- 4. REGISTRY INTEGRITY: Cards & Baloot Rejection ---');
 
-  await it('Baloot: Target score 152 triggers MATCH_END with winning and losing teams', () => {
-    const room = rooms.createRoom({ hostUser: u1, gameType: 'baloot', maxPlayers: 4 });
-    room.addPlayer(u2);
-    room.addPlayer(u3);
-    room.addPlayer(u4);
-    const game = room.startGame(u1.id, BalootGame);
-
-    // Simulate round finish where Team 0 exceeds 152
-    game.teamScores = [160, 80];
-    game.contract = { type: 'sun', team: 0, buyerSeat: 0 };
-    game.teamAbnat = [100, 30];
-
-    game.finishRound();
-
-    assert.strictEqual(game.status, GAME_STATUS.MATCH_END);
-    assert.ok(game.winner.includes('فريق 1'), 'Team 1 must be winner');
-    assert.ok(game.loser.includes('فريق 2'), 'Team 2 must be loser');
-    assert.strictEqual(game.draw, false);
+  await it('Cards and Baloot actions cannot be created or played', () => {
+    assert.strictEqual(validateGameType('baloot').valid, false);
+    assert.strictEqual(validateGameType('cards').valid, false);
+    assert.throws(() => {
+      rooms.createRoom({ hostUser: u1, gameType: 'baloot', maxPlayers: 4 });
+    }, /Unsupported|غير مدعوم/i);
   });
 
   console.log('\n======================================================');

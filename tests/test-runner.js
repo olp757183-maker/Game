@@ -12,8 +12,8 @@ import { getEffectiveRules, getDefaultRules } from '../shared/rules.js';
 import UnoGame from '../server/games/uno.js';
 import ChessGame from '../server/games/chess.js';
 import DominoGame from '../server/games/domino.js';
-import BalootGame from '../server/games/baloot.js';
-import CardsGame from '../server/games/cards.js';
+import { validateGameType } from '../shared/validation.js';
+import { GAME_TYPES } from '../shared/constants.js';
 
 let passedTests = 0;
 let totalTests = 0;
@@ -245,62 +245,22 @@ async function main() {
     assert.strictEqual(dominoGame.board.length, 1);
   });
 
-  // 7. BALOOT GAME ENGINE
-  console.log('\n--- 7. Baloot Engine (4 Players) ---');
-  let balootRoom, balootGame;
-
-  await runTest('Baloot 4-Player 2-Team Dealing & Sun Contract Bidding', () => {
-    balootRoom = rooms.createRoom({
-      hostUser: userA,
-      gameType: 'baloot',
-      maxPlayers: 4
-    });
-    balootRoom.addPlayer(userB);
-    balootRoom.addPlayer(userC);
-    balootRoom.addPlayer(userD);
-
-    balootGame = balootRoom.startGame(userA.id, BalootGame);
-    assert.strictEqual(balootGame.status, 'BIDDING');
-    assert.ok(balootGame.floorCard);
-
-    // All players have 5 initial cards
-    balootGame.players.forEach(p => {
-      assert.strictEqual(p.hand.length, 5);
-    });
-
-    // Bidder calls Sun
-    const bidder = balootGame.getCurrentPlayer();
-    const bidRes = balootGame.handleAction(bidder.id, {
-      type: 'BID',
-      bid: 'sun'
-    });
-    assert.strictEqual(bidRes.success, true);
-    assert.strictEqual(balootGame.status, 'PLAYING');
-    assert.strictEqual(balootGame.contract.type, 'sun');
-
-    // All players now have 8 cards!
-    balootGame.players.forEach(p => {
-      assert.strictEqual(p.hand.length, 8);
-    });
+  // 7. REMOVAL OF BALOOT & CARDS VERIFICATION
+  console.log('\n--- 7. Game Exclusion & Registry Validation ---');
+  await runTest('Baloot and Cards are cleanly excluded and rejected by Game Registry', () => {
+    assert.strictEqual(validateGameType('baloot').valid, false);
+    assert.strictEqual(validateGameType('cards').valid, false);
+    assert.deepStrictEqual(Object.values(GAME_TYPES).sort(), ['chess', 'domino', 'uno'].sort());
   });
 
-  // 8. CARDS / BATTA GAME ENGINE
-  console.log('\n--- 8. Cards / Batta Engine ---');
-  let cardsRoom, cardsGame;
-
-  await runTest('Cards Engine 52-card Shedding & Top Discard Match', () => {
-    cardsRoom = rooms.createRoom({
-      hostUser: userA,
-      gameType: 'cards',
-      maxPlayers: 2
-    });
-    cardsRoom.addPlayer(userB);
-    cardsGame = cardsRoom.startGame(userA.id, CardsGame);
-
-    assert.strictEqual(cardsGame.status, 'PLAYING');
-    assert.ok(cardsGame.getTopDiscard());
-    assert.strictEqual(cardsGame.players[0].hand.length, 5);
-    assert.strictEqual(cardsGame.players[1].hand.length, 5);
+  await runTest('Room Creation Rejects Unsupported Game Types', () => {
+    assert.throws(() => {
+      rooms.createRoom({
+        hostUser: userA,
+        gameType: 'baloot',
+        maxPlayers: 4
+      });
+    }, /Unsupported|غير مدعوم|Game/i);
   });
 
   // 9. DATABASE STATS & REPOSITORY

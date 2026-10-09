@@ -17,14 +17,6 @@ export const UNO_DEFAULT_RULES = {
   turnTimer: 60               // 0 = off, 30, 60, 120 seconds
 };
 
-export const BALOOT_DEFAULT_RULES = {
-  targetScore: 152,           // Standard Baloot winning score
-  turnTimer: 30,              // 30 seconds per bid/card
-  allowProjects: true,        // Declarations (سرا، خمسين، مية، 400)
-  allowDoubling: true,        // دبل، ثري، أربعة، قهوة
-  biddingMode: 'standard'     // Standard Sun & Hokom rounds
-};
-
 export const CHESS_DEFAULT_RULES = {
   timeControl: 300,           // 5 minutes (300 sec); 0 = unlimited
   increment: 3,               // 3 sec increment per move
@@ -40,21 +32,10 @@ export const DOMINO_DEFAULT_RULES = {
   turnTimer: 45               // Seconds per turn
 };
 
-export const CARDS_DEFAULT_RULES = {
-  startingCards: 5,           // Cards dealt per player
-  singleRound: true,          // Match ends on shedding all cards
-  matchingMode: 'rank_or_suit',// Match top card by rank or suit
-  specialCards: true,         // 2 draws 2, 8 changes suit, A skips, J reverses
-  targetScore: 100,           // Target penalty points for match end
-  turnTimer: 45               // Turn timer
-};
-
 export const DEFAULT_RULES_BY_GAME = {
   [GAME_TYPES.UNO]: UNO_DEFAULT_RULES,
-  [GAME_TYPES.BALOOT]: BALOOT_DEFAULT_RULES,
   [GAME_TYPES.CHESS]: CHESS_DEFAULT_RULES,
-  [GAME_TYPES.DOMINO]: DOMINO_DEFAULT_RULES,
-  [GAME_TYPES.CARDS]: CARDS_DEFAULT_RULES
+  [GAME_TYPES.DOMINO]: DOMINO_DEFAULT_RULES
 };
 
 /**
@@ -95,17 +76,6 @@ export function getEffectiveRules(gameType, customRules = {}) {
       }
       break;
 
-    case GAME_TYPES.BALOOT:
-      if (typeof customRules.targetScore === 'number' && customRules.targetScore >= 1) {
-        effective.targetScore = Math.floor(customRules.targetScore);
-      }
-      if (typeof customRules.turnTimer === 'number') {
-        effective.turnTimer = customRules.turnTimer;
-      }
-      if (typeof customRules.allowProjects === 'boolean') effective.allowProjects = customRules.allowProjects;
-      if (typeof customRules.allowDoubling === 'boolean') effective.allowDoubling = customRules.allowDoubling;
-      break;
-
     case GAME_TYPES.CHESS:
       if (typeof customRules.timeControl === 'number') {
         effective.timeControl = customRules.timeControl;
@@ -127,20 +97,6 @@ export function getEffectiveRules(gameType, customRules = {}) {
       }
       if (['boneyard', 'pass'].includes(customRules.drawRule)) {
         effective.drawRule = customRules.drawRule;
-      }
-      if (typeof customRules.turnTimer === 'number') {
-        effective.turnTimer = customRules.turnTimer;
-      }
-      break;
-
-    case GAME_TYPES.CARDS:
-      if (typeof customRules.startingCards === 'number' && customRules.startingCards >= 1 && customRules.startingCards <= 10) {
-        effective.startingCards = Math.floor(customRules.startingCards);
-      }
-      if (typeof customRules.singleRound === 'boolean') effective.singleRound = customRules.singleRound;
-      if (typeof customRules.specialCards === 'boolean') effective.specialCards = customRules.specialCards;
-      if (typeof customRules.targetScore === 'number' && customRules.targetScore >= 1) {
-        effective.targetScore = Math.floor(customRules.targetScore);
       }
       if (typeof customRules.turnTimer === 'number') {
         effective.turnTimer = customRules.turnTimer;

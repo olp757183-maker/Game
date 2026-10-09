@@ -1,7 +1,7 @@
 # 🎮 Classic Games — Play With Friends Online
 ### منصة ألعاب كلاسيكية جماعية عبر الإنترنت في الوقت الفعلي
 
-A real-time multiplayer classic games web platform featuring **UNO**, **Baloot (بلوت)**, **Chess (شطرنج)**, **Domino (دومينو)**, and **Cards / Batta (بطّة / شِدّة)**. Built strictly with pure **HTML5, CSS3, JavaScript ES6+ (Native Modules)** on the client, and **Node.js, Express, Socket.IO, SQLite** on the backend.
+A real-time multiplayer classic games web platform featuring **UNO**, **Chess (شطرنج)**, and **Domino (دومينو)**. Built strictly with pure **HTML5, CSS3, JavaScript ES6+ (Native Modules)** on the client, and **Node.js, Express, Socket.IO, SQLite** on the backend.
 
 ---
 
@@ -9,12 +9,10 @@ A real-time multiplayer classic games web platform featuring **UNO**, **Baloot (
 
 * **Zero Frontend Frameworks**: 100% Vanilla HTML5, CSS3, and ES6+ Modules. No React, Vue, Angular, TypeScript, Tailwind, or Bootstrap.
 * **Server-Authoritative Game Architecture**: The server validates all game turns, rule adherence, legal moves, and win conditions. Clients cannot cheat or manipulate cards.
-* **5 Fully Functional Multiplayer Games**:
+* **3 Fully Functional Multiplayer Games**:
   1. **UNO**: 108 cards deck, wild colors, action cards (Skip, Reverse, +2, +4), UNO shout button, penalties, stacking, and rounds scoring.
-  2. **Baloot (بلوت)**: 4 players, 2 teams, 32-card French deck, Sun (صن) & Hokom (حكم) bidding, suit following, trumping, ground trick (أرض), and official 152-point scoring.
-  3. **Chess (شطرنج)**: 8x8 Board, full move validation, in-check alerts, checkmate, stalemate, castling, en passant, pawn promotion, clocks, and draw offers.
-  4. **Domino (دومينو)**: Double-six set (28 tiles), authentic dot layouts, chain matching ends (left/right), boneyard drawing, blocked game detection, and rounds.
-  5. **Cards / Batta (بطّة / شِدّة)**: Customizable 52-card shedding engine with rank/suit matching, power cards (2, 8, Ace, Jack), and custom target scores.
+  2. **Chess (شطرنج)**: 8x8 Board, full move validation, in-check alerts, checkmate, stalemate, castling, en passant, pawn promotion, clocks, and draw offers.
+  3. **Domino (دومينو)**: Double-six set (28 tiles), authentic dot layouts, chain matching ends (left/right), boneyard drawing, blocked game detection, and rounds.
 * **Strict Private State Security**: Each player only sees their own private cards/tiles. Opponents only receive hand counts, preventing any card snooping.
 * **Real-time Synchronization & WebSockets**: Low-latency multiplayer powered by Socket.IO.
 * **In-Room Chat & Live Notifications**: Real-time room chat with system notices (join, leave, game started).
@@ -63,10 +61,8 @@ classic-games/
 │   │
 │   └── games/
 │       ├── uno/uno-client.js
-│       ├── baloot/baloot-client.js
 │       ├── chess/chess-client.js
-│       ├── domino/domino-client.js
-│       └── cards/cards-client.js
+│       └── domino/domino-client.js
 │
 ├── server/
 │   ├── server.js             # Express app & HTTP entrypoint
@@ -78,10 +74,8 @@ classic-games/
 │   │
 │   └── games/
 │       ├── uno.js            # Server-authoritative UNO engine
-│       ├── baloot.js         # Server-authoritative Baloot engine
 │       ├── chess.js          # Server-authoritative Chess engine
-│       ├── domino.js         # Server-authoritative Domino engine
-│       └── cards.js          # Server-authoritative Cards engine
+│       └── domino.js         # Server-authoritative Domino engine
 │
 ├── shared/
 │   ├── constants.js          # Enums, game types, socket events
@@ -145,7 +139,7 @@ node tests/multiplayer-simulation.js
 1. Start the server with `npm start`.
 2. Open **Browser 1** (e.g. Chrome / Normal Window) and navigate to `http://localhost:3000/lobby.html`.
    * Click **"Play as Guest"** or register as **Player 1**.
-   * Click **"Create Room"**, select **UNO** (or Chess, Domino, Baloot, Cards), and click **Create Room**.
+   * Click **"Create Room"**, select **UNO** (or Chess, Domino), and click **Create Room**.
    * Note the generated 6-letter room code (e.g. `X7K92P`).
 3. Open **Browser 2** (e.g. Incognito Window / Firefox / Edge) and navigate to `http://localhost:3000/lobby.html`.
    * Click **"Play as Guest"** or register as **Player 2**.

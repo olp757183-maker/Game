@@ -31,8 +31,7 @@ html, body {
 .rooms-table-container,
 .modal-body,
 .game-table,
-.chess-grid-wrapper,
-.baloot-felt-arena {
+.chess-grid-wrapper {
   max-width: none;
 }
 
@@ -47,10 +46,6 @@ html, body {
   .chess-board {
     width: min(520px, 80vw, calc(100dvh - 240px));
     height: min(520px, 80vw, calc(100dvh - 240px));
-  }
-
-  .baloot-felt-arena {
-    min-height: 420px;
   }
 }
 
@@ -366,59 +361,6 @@ html, body {
     height: 5px;
   }
 
-  /* Baloot Table Controls */
-  .baloot-felt-arena {
-    min-height: clamp(280px, 44vh, 360px);
-  }
-
-  .seat-pos {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.76rem;
-  }
-
-  .seat-pos .player-name {
-    max-width: 85px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 0.76rem;
-  }
-
-  .seat-pos.seat-top { top: 6px; }
-  .seat-pos.seat-left { left: 4px; }
-  .seat-pos.seat-right { right: 4px; }
-
-  .baloot-center-felt {
-    width: min(160px, 44vw);
-    height: min(160px, 44vw);
-  }
-
-  .active-trick-layout {
-    width: min(150px, 42vw);
-    height: min(150px, 42vw);
-  }
-
-  .bidding-actions-group .btn {
-    min-height: 36px;
-    padding: 0.35rem 0.65rem;
-    font-size: 0.82rem;
-  }
-
-  .baloot-scoreboard {
-    padding: 0.4rem 0.6rem;
-  }
-
-  .team-tag {
-    font-size: 0.72rem;
-  }
-
-  .score-num {
-    font-size: 1.15rem;
-  }
-
-  .abnat-num {
-    font-size: 0.7rem;
-  }
 }
 
 /* --------------------------------------------------------------------------
@@ -632,51 +574,6 @@ html, body {
     padding: 0.15rem 0.4rem;
   }
 
-  /* Baloot in 320px */
-  .baloot-felt-arena {
-    min-height: 260px;
-  }
-
-  .seat-pos {
-    max-width: 68px;
-    padding: 0.15rem 0.25rem;
-    font-size: 0.68rem;
-  }
-
-  .seat-pos .player-name {
-    max-width: 58px;
-    font-size: 0.68rem;
-  }
-
-  .seat-pos .avatar-badge {
-    width: 22px;
-    height: 22px;
-  }
-
-  .seat-pos.seat-left { left: 2px; }
-  .seat-pos.seat-right { right: 2px; }
-  .seat-pos.seat-top { top: 4px; }
-
-  .baloot-center-felt {
-    width: 130px;
-    height: 130px;
-  }
-
-  .active-trick-layout {
-    width: 120px;
-    height: 120px;
-  }
-
-  .trick-played-card .playing-card {
-    width: 36px;
-    height: 54px;
-  }
-
-  .trick-owner-name {
-    font-size: 0.6rem;
-    padding: 1px 3px;
-  }
-
   /* Modals in 320px */
   .modal-box, .wild-modal-box {
     width: calc(100vw - 12px);
@@ -767,11 +664,6 @@ html, body {
 
   .chess-grid-wrapper {
     padding: 4px;
-  }
-
-  /* Baloot in Landscape */
-  .baloot-felt-arena {
-    min-height: calc(100dvh - 120px);
   }
 
   /* Player Hand in Landscape: Keep compact to avoid scrolling */

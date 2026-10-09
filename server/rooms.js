@@ -23,7 +23,10 @@ export class Room {
     this.privacy = privacy;
     this.locked = false;
 
-    const gameSpec = GAME_INFO[gameType] || { minPlayers: 2, maxPlayers: 4, defaultPlayers: 4 };
+    const gameSpec = GAME_INFO[gameType];
+    if (!gameSpec) {
+      throw new Error(`Unsupported game type: ${gameType}`);
+    }
     this.minPlayers = gameSpec.minPlayers;
     this.maxPlayers = Math.min(Math.max(maxPlayers || gameSpec.defaultPlayers, gameSpec.minPlayers), gameSpec.maxPlayers);
 

@@ -32,9 +32,8 @@ import rooms from '../server/rooms.js';
 import UnoGame from '../server/games/uno.js';
 import ChessGame from '../server/games/chess.js';
 import DominoGame from '../server/games/domino.js';
-import BalootGame from '../server/games/baloot.js';
-import CardsGame from '../server/games/cards.js';
-import { ROOM_STATUS, GAME_STATUS, ERROR_CODES } from '../shared/constants.js';
+import { validateGameType } from '../shared/validation.js';
+import { ROOM_STATUS, GAME_STATUS, GAME_TYPES, ERROR_CODES } from '../shared/constants.js';
 
 let passedCount = 0;
 let totalCount = 0;
@@ -334,49 +333,21 @@ async function runAll() {
   });
 
   // ==================================================================
-  // 4. BALOOT TESTS
+  // 4. VERIFICATION OF REMOVED GAMES & REGISTRY SANITY
   // ==================================================================
-  console.log('\n--- 4. Baloot Win/Loss Authoritative Logic ---');
+  console.log('\n--- 4. Removed Games Rejection & Registry Security ---');
 
-  await test('Baloot: Target score (152) triggers MATCH_END and declares winning and losing teams', () => {
-    const room = rooms.createRoom({ hostUser: u1, gameType: 'baloot', maxPlayers: 4 });
-    room.addPlayer(u2);
-    room.addPlayer(u3);
-    room.addPlayer(u4);
-    const game = room.startGame(u1.id, BalootGame);
-
-    // Set score to 140 for Team 0, 80 for Team 1
-    game.teamScores = [140, 80];
-    game.contract = { type: 'sun', buyerSeat: 0, team: 0 };
-    game.teamAbnat = [100, 30]; // Team 0 clearly won round
-    game.status = GAME_STATUS.PLAYING;
-
-    // Simulate round complete calculation
-    game.finishRound();
-
-    assert.strictEqual(game.status, GAME_STATUS.MATCH_END);
-    assert.strictEqual(game.winningTeam, 0);
-    assert.ok(game.winner.includes('فريق 1'));
-    assert.ok(game.loser.includes('فريق 2'));
-    assert.strictEqual(game.finishReason, 'TARGET_REACHED');
+  await test('Game Registry: Baloot and Cards are rejected and not supported', () => {
+    assert.strictEqual(validateGameType('baloot').valid, false);
+    assert.strictEqual(validateGameType('cards').valid, false);
+    assert.deepStrictEqual(Object.values(GAME_TYPES).sort(), ['chess', 'domino', 'uno'].sort());
   });
 
-  await test('Baloot: Below target score does NOT end match, transitions to ROUND_END', () => {
-    const room = rooms.createRoom({ hostUser: u1, gameType: 'baloot', maxPlayers: 4 });
-    room.addPlayer(u2);
-    room.addPlayer(u3);
-    room.addPlayer(u4);
-    const game = room.startGame(u1.id, BalootGame);
-
-    game.teamScores = [30, 20];
-    game.contract = { type: 'hokom', buyerSeat: 0, team: 0 };
-    game.teamAbnat = [90, 40];
-    game.status = GAME_STATUS.PLAYING;
-
-    game.finishRound();
-
-    assert.strictEqual(game.status, GAME_STATUS.ROUND_END);
-    assert.strictEqual(game.winner, null, 'Winner must NOT be announced before target score');
+  await test('Room Creation: Attempting to create Baloot or Cards room is forbidden by validation', () => {
+    const balootVal = validateGameType('baloot');
+    const cardsVal = validateGameType('cards');
+    assert.strictEqual(balootVal.valid, false);
+    assert.strictEqual(cardsVal.valid, false);
   });
 
   // ==================================================================

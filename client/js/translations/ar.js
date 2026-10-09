@@ -15,14 +15,14 @@ export const ar = {
 
   // Home Page
   heroTitle: "ألعاب كلاسيكية — العب مع أصدقائك",
-  heroSubtitle: "منصة جماعية في الوقت الفعلي لألعاب أونو، بلوت، شطرنج، دومينو، والورق مباشرة من متصفحك.",
+  heroSubtitle: "منصة جماعية في الوقت الفعلي لألعاب أونو، شطرنج، ودومينو مباشرة من متصفحك.",
   playNow: "العب الآن",
   createRoom: "إنشاء غرفة",
   joinRoom: "الانضمام لغرفة",
   featuredGames: "الألعاب المتاحة",
   howItWorks: "كيف تبدأ اللعب؟",
   step1Title: "1. اختر اللعبة",
-  step1Desc: "اختر أونو، بلوت، شطرنج، دومينو أو لعبة الشدّة.",
+  step1Desc: "اختر أونو، شطرنج، أو دومينو.",
   step2Title: "2. أنشئ غرفة",
   step2Desc: "خصص القوانين ووقت الدور ومستوى الخصوصية.",
   step3Title: "3. شارك الكود",
@@ -116,21 +116,6 @@ export const ar = {
   dominoPickSide: "اختر جهة اللعب",
   dominoLeft: "الجهة اليسرى",
   dominoRight: "الجهة اليمنى",
-
-  // Baloot Specific
-  balootSun: "صن",
-  balootHokom: "حكم",
-  balootPass: "بس",
-  balootAshkal: "أشكال",
-  balootTeam1: "فريق لنا (شمال / جنوب)",
-  balootTeam2: "فريق لهم (شرق / غرب)",
-  balootRound: "الجولة",
-  balootContract: "نوع اللعب",
-
-  // Cards / Batta
-  cardsDrawBtn: "سحب ورقة",
-  cardsPassBtn: "تمرير",
-  cardsSelectSuit: "اختر النوع الجديد",
 
   // Rules Editor
   rulesGeneralTab: "عام",

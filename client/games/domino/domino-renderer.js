@@ -53,17 +53,39 @@ export function renderDomino(state, options = {}) {
   const opponents = state.players.filter(p => p.id !== myId);
   const selectedTileId = options.selectedTileId || null;
 
+  const selectedTile = (state.myHand || []).find(t => t.id === selectedTileId);
+  const isBoardEmpty = (state.board || []).length === 0;
+  const canLeft = selectedTile && (isBoardEmpty || selectedTile.left === state.leftEnd || selectedTile.right === state.leftEnd);
+  const canRight = selectedTile && (isBoardEmpty || selectedTile.left === state.rightEnd || selectedTile.right === state.rightEnd);
+
+  // Check if player has no playable tiles
+  const hasPlayableTile = isBoardEmpty
+    ? (state.myHand?.length > 0)
+    : (state.myHand || []).some(t => t.left === state.leftEnd || t.right === state.leftEnd || t.left === state.rightEnd || t.right === state.rightEnd);
+
   return `
     <div class="game-container domino-game-container">
       <!-- Game Header / Ends & Boneyard Meta -->
       <div class="game-header">
-        <div class="boneyard-pill">
+        <div class="boneyard-pill ${isMyTurn && state.boneyardCount > 0 && !hasPlayableTile ? 'can-draw-boneyard pulse-glow' : ''}"
+             id="domino-boneyard-slot"
+             title="${isMyTurn && state.boneyardCount > 0 ? 'اضغط هنا لسحب قطعة من المخزن' : 'مخزن السحب'}">
           <span class="badge badge-info">🁢 ${i18n.t('dominoBoneyard') || 'السحب (Boneyard)'}: <strong>${state.boneyardCount}</strong></span>
         </div>
 
         <div class="ends-tracker">
-          <span class="end-tag left-end">◀ الطرف الأيسر: <strong>${state.leftEnd ?? '-'}</strong></span>
-          <span class="end-tag right-end">الطرف الأيمن: <strong>${state.rightEnd ?? '-'}</strong> ▶</span>
+          <span class="end-tag left-end ${canLeft ? 'end-target-legal pulse-target' : ''}"
+                id="domino-target-left"
+                data-side="left"
+                title="${canLeft ? 'اضغط لوضع القطعة على الطرف الأيسر' : 'الطرف الأيسر'}">
+            ◀ الطرف الأيسر: <strong>${state.leftEnd ?? '-'}</strong>
+          </span>
+          <span class="end-tag right-end ${canRight ? 'end-target-legal pulse-target' : ''}"
+                id="domino-target-right"
+                data-side="right"
+                title="${canRight ? 'اضغط لوضع القطعة على الطرف الأيمن' : 'الطرف الأيمن'}">
+            الطرف الأيمن: <strong>${state.rightEnd ?? '-'}</strong> ▶
+          </span>
         </div>
 
         <div class="game-status-badge ${isMyTurn ? 'my-turn' : ''}">
@@ -93,26 +115,25 @@ export function renderDomino(state, options = {}) {
       <!-- Center Board: Domino Chain -->
       <div class="game-board domino-center-table">
         <div class="domino-chain-scroll">
-          <div class="domino-chain">
-            ${(state.board || []).length === 0 ? `
-              <div class="empty-table-placeholder">
-                <span>🁢 ضع أول قطعة دومينو لبدء السلسلة!</span>
+          <div class="domino-chain" id="domino-chain-container">
+            ${canLeft && !isBoardEmpty ? `<div class="chain-drop-zone drop-left" data-side="left" title="ضع هنا (يسار)">◀</div>` : ''}
+            ${isBoardEmpty ? `
+              <div class="empty-table-placeholder ${selectedTile ? 'can-drop-first' : ''}" id="domino-empty-table" title="اضغط هنا لوضع أول قطعة">
+                <span>🁢 ${selectedTile ? 'اضغط هنا لوضع أول قطعة دومينو!' : 'اختر قطعة من يدك لبدء السلسلة!'}</span>
               </div>
             ` : state.board.map(t => renderBoardTile(t)).join('')}
+            ${canRight && !isBoardEmpty ? `<div class="chain-drop-zone drop-right" data-side="right" title="ضع هنا (يمين)">▶</div>` : ''}
           </div>
         </div>
       </div>
 
-      <!-- Action Controls -->
-      <div class="game-actions">
-        <div class="action-buttons-group">
-          <button id="domino-draw-btn" class="btn btn-primary" ${!isMyTurn || state.boneyardCount === 0 ? 'disabled' : ''}>
-            🁢 ${i18n.t('dominoDrawBtn') || 'سحب قطعة'}
+      <!-- Contextual Turn Bar (No standalone action buttons) -->
+      <div class="game-actions domino-direct-actions">
+        ${isMyTurn && !hasPlayableTile && state.boneyardCount === 0 ? `
+          <button id="domino-pass-chip" class="btn btn-sm btn-outline domino-pass-chip pulse-glow">
+            ⏭ ${i18n.t('dominoPassBtn') || 'تمرير الدور (لا توجد حركة)'}
           </button>
-          <button id="domino-pass-btn" class="btn btn-outline" ${!isMyTurn ? 'disabled' : ''}>
-            ⏭ ${i18n.t('dominoPassBtn') || 'تمرير (Pass)'}
-          </button>
-        </div>
+        ` : ''}
       </div>
 
       <!-- Player Hand Area -->

@@ -61,40 +61,24 @@ export class CardsClient {
     const myId = this.state.myPlayerId;
     const isMyTurn = (this.state.currentTurnPlayerId === myId);
 
-    // Player hand card selection and playing
+    // Direct card play from hand: click/tap immediately plays card!
     this.container.querySelectorAll('.player-hand .playing-card').forEach(el => {
       el.addEventListener('click', () => {
         if (this.actionInFlight) return;
         const cardId = el.getAttribute('data-id');
-        const card = this.state.myHand.find(c => c.id === cardId);
+        const card = this.state.myHand?.find(c => c.id === cardId);
         if (!card) return;
 
-        // If card was already selected and it's my turn, play it
-        if (this.selectedCardId === cardId) {
-          if (isMyTurn) {
-            this.handleCardPlay(card);
-          }
+        if (!isMyTurn) {
+          showToast('ليس دورك الآن (انتظر دورك)', 'warning');
+          el.classList.add('shake-anim');
+          setTimeout(() => el.classList.remove('shake-anim'), 400);
           return;
         }
 
-        // Otherwise, select the card
-        this.selectedCardId = cardId;
-        sfx.click();
-        this.render();
+        this.handleCardPlay(card, el);
       });
     });
-
-    // Play button in action bar
-    const playBtn = this.container.querySelector('#cards-play-btn');
-    if (playBtn) {
-      playBtn.addEventListener('click', () => {
-        if (!isMyTurn || !this.selectedCardId || this.actionInFlight) return;
-        const card = this.state.myHand.find(c => c.id === this.selectedCardId);
-        if (card) {
-          this.handleCardPlay(card);
-        }
-      });
-    }
 
     // Suit selection for 8
     this.container.querySelectorAll('.suit-choice-btn').forEach(btn => {
@@ -102,47 +86,51 @@ export class CardsClient {
         if (this.actionInFlight) return;
         const suit = btn.getAttribute('data-suit');
         if (this.selectedEightCardId) {
-          this.playCard(this.selectedEightCardId, suit);
+          const cardId = this.selectedEightCardId;
           this.selectedEightCardId = null;
           const modal = this.container.querySelector('#cards-suit-modal');
           if (modal) modal.classList.remove('active');
+          this.playCard(cardId, suit);
         }
       });
     });
 
-    // Draw buttons (felt pile and action button)
+    // Draw pile direct interaction: draw or pass
     const drawPile = this.container.querySelector('#cards-draw-pile');
     if (drawPile) {
       drawPile.addEventListener('click', () => {
-        if (isMyTurn && !this.actionInFlight) this.drawCard();
+        if (!isMyTurn) {
+          showToast('ليس دورك الآن للسحب', 'warning');
+          return;
+        }
+        if (this.state.hasDrawnThisTurn) {
+          this.passTurn();
+        } else {
+          this.drawCard();
+        }
       });
     }
 
-    const drawBtn = this.container.querySelector('#cards-draw-btn');
-    if (drawBtn) {
-      drawBtn.addEventListener('click', () => {
-        if (isMyTurn && !this.actionInFlight) this.drawCard();
-      });
-    }
-
-    // Pass button
-    const passBtn = this.container.querySelector('#cards-pass-btn');
-    if (passBtn) {
-      passBtn.addEventListener('click', () => {
+    // Contextual Pass Chip
+    const passChip = this.container.querySelector('#cards-pass-chip');
+    if (passChip) {
+      passChip.addEventListener('click', () => {
         if (isMyTurn && !this.actionInFlight) this.passTurn();
       });
     }
   }
 
-  handleCardPlay(card) {
+  handleCardPlay(card, cardEl = null) {
     if (this.actionInFlight) return;
     if (card.rank === '8') {
       this.selectedEightCardId = card.id;
       const modal = this.container.querySelector('#cards-suit-modal');
       if (modal) modal.classList.add('active');
     } else {
+      if (cardEl) {
+        cardEl.classList.add('card-play-anim');
+      }
       this.playCard(card.id);
-      this.selectedCardId = null;
     }
   }
 

@@ -344,14 +344,15 @@ export class DominoGame {
 
     const target = this.rules.targetScore || 100;
 
-    if (this.scores[winner.id] >= target) {
+    if (this.rules.singleRound === true || this.scores[winner.id] >= target) {
       this.status = GAME_STATUS.MATCH_END;
       this.endedAt = Date.now();
       this.winner = winner.username;
-      const loserPlayer = this.players.find(p => p.id !== winner.id);
-      this.loser = loserPlayer ? loserPlayer.username : null;
+      const otherPlayers = this.players.filter(p => p.id !== winner.id);
+      otherPlayers.sort((a, b) => (this.scores[a.id] || 0) - (this.scores[b.id] || 0));
+      this.loser = otherPlayers[0] ? otherPlayers[0].username : null;
       this.draw = false;
-      this.reason = `وصل إلى نقاط الفوز (${target})`;
+      this.reason = isBlocked ? 'فوز بالصكّة' : `وصل إلى نقاط الفوز (${target})`;
     } else {
       this.status = GAME_STATUS.ROUND_END;
       this.reason = isBlocked ? 'انتهت الجولة بالصكّة' : 'أنهى جميع قطعه';

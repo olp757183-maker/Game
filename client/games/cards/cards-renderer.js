@@ -125,32 +125,26 @@ export function renderCards(state, options = {}) {
 
       <!-- Game Table / Felt Center -->
       <div class="game-table cards-felt">
-        <!-- Draw Pile -->
-        <div class="draw-pile-slot" id="cards-draw-pile" title="Click to draw a card">
+        <!-- Draw Pile (Direct Interactive Element) -->
+        <div class="draw-pile-slot ${isMyTurn ? 'can-draw' : ''}" id="cards-draw-pile" title="${isMyTurn ? (state.hasDrawnThisTurn ? 'اضغط لتمرير الدور أو اسحب' : 'اضغط على الكومة لسحب بطاقة') : 'كومة السحب'}">
           ${renderCardBack({ count: state.deckCount, label: i18n.t('cardsDrawBtn') })}
           <span class="pile-label">${i18n.t('cardsDrawBtn')} (${state.deckCount})</span>
         </div>
 
         <!-- Discard Pile -->
-        <div class="discard-pile-slot">
+        <div class="discard-pile-slot" id="cards-discard-pile">
           ${state.topDiscard ? renderPlayingCard(state.topDiscard, { inHand: false, interactive: false }) : '<div class="empty-pile"></div>'}
           <span class="pile-label">${i18n.t('cardsDiscardBtn') || 'Table'}</span>
         </div>
       </div>
 
-      <!-- Action Controls -->
-      <div class="game-actions">
-        <div class="action-buttons-group">
-          <button id="cards-draw-btn" class="btn btn-primary" ${!isMyTurn ? 'disabled' : ''}>
-            🎴 ${i18n.t('cardsDrawBtn')}
+      <!-- Turn & Contextual Action Bar -->
+      <div class="game-actions cards-direct-actions">
+        ${isMyTurn && state.hasDrawnThisTurn ? `
+          <button id="cards-pass-chip" class="btn btn-sm btn-outline cards-pass-chip">
+            ⏭ ${i18n.t('cardsPassBtn') || 'إنهاء الدور (تمرير)'}
           </button>
-          <button id="cards-play-btn" class="btn btn-success" ${!isMyTurn || !selectedCardId ? 'disabled' : ''}>
-            ▶ ${i18n.t('cardsPlayBtn') || 'العب البطاقة'}
-          </button>
-          <button id="cards-pass-btn" class="btn btn-outline" ${!isMyTurn || (!state.hasDrawnThisTurn && state.pendingDraw === 0) ? 'disabled' : ''}>
-            ⏭ ${i18n.t('cardsPassBtn')}
-          </button>
-        </div>
+        ` : ''}
       </div>
 
       <!-- Player Hand Area -->

@@ -60,7 +60,7 @@ export class DominoClient {
     const myId = this.state.myPlayerId;
     const isMyTurn = (this.state.currentTurnPlayerId === myId);
 
-    // Hand tiles click
+    // Hand tiles: Click selects tile and highlights legal ends
     this.container.querySelectorAll('.player-hand .domino-tile').forEach(el => {
       el.addEventListener('click', () => {
         if (!isMyTurn || this.actionInFlight) return;
@@ -68,22 +68,100 @@ export class DominoClient {
         const tile = this.state.myHand?.find(t => t.id === tileId);
         if (!tile) return;
 
-        const canLeft = (tile.left === this.state.leftEnd || tile.right === this.state.leftEnd);
-        const canRight = (tile.left === this.state.rightEnd || tile.right === this.state.rightEnd);
+        // If clicking already selected tile, or if only 1 matching end exists, play it!
+        if (this.selectedTileId === tileId) {
+          const isBoardEmpty = (this.state.board || []).length === 0;
+          if (isBoardEmpty) {
+            this.playTile(tileId, 'right');
+            return;
+          }
+          const canLeft = (tile.left === this.state.leftEnd || tile.right === this.state.leftEnd);
+          const canRight = (tile.left === this.state.rightEnd || tile.right === this.state.rightEnd);
 
-        // If tile can be placed on both ends and ends are different
-        if (canLeft && canRight && this.state.board.length > 0 && this.state.leftEnd !== this.state.rightEnd) {
-          this.pendingDualTileId = tileId;
-          const modal = this.container.querySelector('#domino-side-modal');
-          if (modal) modal.classList.add('active');
-        } else {
-          const side = canLeft ? 'left' : 'right';
-          this.playTile(tileId, side);
+          if (canLeft && !canRight) {
+            this.playTile(tileId, 'left');
+            return;
+          } else if (!canLeft && canRight) {
+            this.playTile(tileId, 'right');
+            return;
+          } else if (canLeft && canRight) {
+            // Open modal to choose side
+            this.pendingDualTileId = tileId;
+            const modal = this.container.querySelector('#domino-side-modal');
+            if (modal) modal.classList.add('active');
+            return;
+          }
         }
+
+        // Select tile and highlight ends
+        this.selectedTileId = tileId;
+        sfx.click();
+        this.render();
       });
     });
 
-    // Side selection buttons
+    // Board Ends / Drop zones direct click
+    const handleEndClick = (side) => {
+      if (!isMyTurn || !this.selectedTileId || this.actionInFlight) return;
+      this.playTile(this.selectedTileId, side);
+    };
+
+    const leftEndEl = this.container.querySelector('#domino-target-left');
+    if (leftEndEl) leftEndEl.addEventListener('click', () => handleEndClick('left'));
+
+    const rightEndEl = this.container.querySelector('#domino-target-right');
+    if (rightEndEl) rightEndEl.addEventListener('click', () => handleEndClick('right'));
+
+    const leftDropEl = this.container.querySelector('.drop-left');
+    if (leftDropEl) leftDropEl.addEventListener('click', () => handleEndClick('left'));
+
+    const rightDropEl = this.container.querySelector('.drop-right');
+    if (rightDropEl) rightDropEl.addEventListener('click', () => handleEndClick('right'));
+
+    const emptyTable = this.container.querySelector('#domino-empty-table');
+    if (emptyTable) {
+      emptyTable.addEventListener('click', () => {
+        if (isMyTurn && this.selectedTileId && !this.actionInFlight) {
+          this.playTile(this.selectedTileId, 'right');
+        }
+      });
+    }
+
+    // Direct Boneyard click to draw
+    const boneyardSlot = this.container.querySelector('#domino-boneyard-slot');
+    if (boneyardSlot) {
+      boneyardSlot.addEventListener('click', () => {
+        if (isMyTurn && !this.actionInFlight) {
+          if (this.state.boneyardCount === 0) {
+            showToast('مخزن القطع فارغ', 'info');
+            return;
+          }
+          this.actionInFlight = true;
+          if (this.actionTimeout) clearTimeout(this.actionTimeout);
+          this.actionTimeout = setTimeout(() => { this.actionInFlight = false; }, 2000);
+          sfx.drawCard();
+          const actionId = `domino_draw_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+          socket.sendGameAction({ type: 'DRAW_TILE', actionId }, this.roomId);
+        }
+      });
+    }
+
+    // Contextual Pass Chip
+    const passChip = this.container.querySelector('#domino-pass-chip');
+    if (passChip) {
+      passChip.addEventListener('click', () => {
+        if (isMyTurn && !this.actionInFlight) {
+          this.actionInFlight = true;
+          if (this.actionTimeout) clearTimeout(this.actionTimeout);
+          this.actionTimeout = setTimeout(() => { this.actionInFlight = false; }, 2000);
+          sfx.click();
+          const actionId = `domino_pass_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+          socket.sendGameAction({ type: 'PASS', actionId }, this.roomId);
+        }
+      });
+    }
+
+    // Side selection modal buttons
     this.container.querySelectorAll('.side-pick-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const side = btn.getAttribute('data-side');
@@ -95,36 +173,6 @@ export class DominoClient {
         }
       });
     });
-
-    // Draw button
-    const drawBtn = this.container.querySelector('#domino-draw-btn');
-    if (drawBtn) {
-      drawBtn.addEventListener('click', () => {
-        if (isMyTurn && !this.actionInFlight) {
-          this.actionInFlight = true;
-          if (this.actionTimeout) clearTimeout(this.actionTimeout);
-          this.actionTimeout = setTimeout(() => { this.actionInFlight = false; }, 2000);
-          sfx.drawCard();
-          const actionId = `domino_draw_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-          socket.sendGameAction({ type: 'DRAW_TILE', actionId }, this.roomId);
-        }
-      });
-    }
-
-    // Pass button
-    const passBtn = this.container.querySelector('#domino-pass-btn');
-    if (passBtn) {
-      passBtn.addEventListener('click', () => {
-        if (isMyTurn && !this.actionInFlight) {
-          this.actionInFlight = true;
-          if (this.actionTimeout) clearTimeout(this.actionTimeout);
-          this.actionTimeout = setTimeout(() => { this.actionInFlight = false; }, 2000);
-          sfx.click();
-          const actionId = `domino_pass_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-          socket.sendGameAction({ type: 'PASS', actionId }, this.roomId);
-        }
-      });
-    }
   }
 
   playTile(tileId, side) {

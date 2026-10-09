@@ -25,6 +25,8 @@ export class BalootClient {
     this.pendingRoundTwoHokom = false;
     const modal = this.container.querySelector('#baloot-suit-modal');
     if (modal) modal.classList.remove('active');
+    const msg = err?.messageAr || err?.messageEn || 'هذه الحركة غير مسموحة';
+    showToast(`⚠️ ${msg}`, 'error');
     this.render();
   }
 
@@ -60,39 +62,31 @@ export class BalootClient {
     const myId = this.state.myPlayerId;
     const isMyTurn = (this.state.currentTurnPlayerId === myId);
 
-    // Hand card selection & play
+    // Direct card play from hand: click/tap immediately plays the card!
     this.container.querySelectorAll('.player-hand .playing-card').forEach(el => {
       el.addEventListener('click', () => {
         if (this.actionInFlight) return;
         const cardId = el.getAttribute('data-id');
-        const card = this.state.myHand.find(c => c.id === cardId);
+        const card = this.state.myHand?.find(c => c.id === cardId);
         if (!card) return;
 
-        // If in play phase and already selected, play the card
-        if (this.selectedCardId === cardId) {
-          if (isMyTurn && this.state.status === 'PLAYING') {
-            this.playCard(cardId);
-            this.selectedCardId = null;
-          }
+        if (this.state.status === 'BIDDING') {
+          showToast('اللعبة في مرحلة المزايدة حالياً (اختر صَن أو حُكم أو بس)', 'info');
           return;
         }
 
-        // Select card
-        this.selectedCardId = cardId;
-        sfx.click();
-        this.render();
+        if (!isMyTurn) {
+          showToast('ليس دورك الآن (انتظر دورك)', 'warning');
+          el.classList.add('shake-anim');
+          setTimeout(() => el.classList.remove('shake-anim'), 400);
+          return;
+        }
+
+        // Direct play without needing secondary button
+        el.classList.add('card-play-anim');
+        this.playCard(cardId);
       });
     });
-
-    // Play button in action bar
-    const playBtn = this.container.querySelector('#baloot-play-btn');
-    if (playBtn) {
-      playBtn.addEventListener('click', () => {
-        if (!isMyTurn || !this.selectedCardId || this.state.status !== 'PLAYING' || this.actionInFlight) return;
-        this.playCard(this.selectedCardId);
-        this.selectedCardId = null;
-      });
-    }
 
     // Bidding actions
     this.container.querySelectorAll('.bid-btn').forEach(btn => {

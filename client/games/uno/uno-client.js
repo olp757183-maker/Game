@@ -60,71 +60,61 @@ export class UnoClient {
     const myId = this.state.myPlayerId;
     const isMyTurn = (this.state.currentTurnPlayerId === myId);
 
-    // Play card click from hand
+    // Direct card play from hand: click/tap immediately plays card!
     this.container.querySelectorAll('.player-hand .uno-card').forEach(el => {
       el.addEventListener('click', () => {
+        if (this.actionInFlight) return;
         const cardId = el.getAttribute('data-id');
         const card = this.state.myHand.find(c => c.id === cardId);
         if (!card) return;
 
-        // If already selected, play it
-        if (this.selectedCardId === cardId) {
-          if (isMyTurn) {
-            this.handleCardPlay(card);
-          }
+        if (!isMyTurn) {
+          showToast('ليس دورك الآن (انتظر دورك)', 'warning');
+          el.classList.add('shake-anim');
+          setTimeout(() => el.classList.remove('shake-anim'), 400);
           return;
         }
 
-        // Otherwise select card
-        this.selectedCardId = cardId;
-        sfx.click();
-        this.render();
+        // Direct play without needing secondary button
+        this.handleCardPlay(card, el);
       });
     });
 
-    // Action bar play button
-    const playBtn = this.container.querySelector('#uno-play-btn');
-    if (playBtn) {
-      playBtn.addEventListener('click', () => {
-        if (!isMyTurn || !this.selectedCardId) return;
-        const card = this.state.myHand.find(c => c.id === this.selectedCardId);
-        if (card) {
-          this.handleCardPlay(card);
-        }
-      });
-    }
-
-    // Wild color picker buttons
+    // Wild color picker modal options
     this.container.querySelectorAll('.color-choice-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const chosenColor = btn.getAttribute('data-color');
         if (this.selectedWildCardId) {
-          this.playCard(this.selectedWildCardId, chosenColor);
+          const cardId = this.selectedWildCardId;
           this.selectedWildCardId = null;
           const modal = this.container.querySelector('#wild-color-modal');
           if (modal) modal.classList.remove('active');
+          this.playCard(cardId, chosenColor);
         }
       });
     });
 
-    // Draw buttons (felt pile & action bar)
+    // Interactive Draw Pile click: Direct draw or pass
     const drawPile = this.container.querySelector('#uno-draw-pile');
     if (drawPile) {
       drawPile.addEventListener('click', () => {
-        if (isMyTurn) this.drawCard();
-      });
-    }
-    const drawBtn = this.container.querySelector('#uno-draw-btn');
-    if (drawBtn) {
-      drawBtn.addEventListener('click', () => {
-        if (isMyTurn) this.drawCard();
+        if (!isMyTurn) {
+          showToast('ليس دورك الآن', 'warning');
+          return;
+        }
+        if (this.state.hasDrawnThisTurn) {
+          // If already drawn, clicking pile offers passing the turn
+          this.passTurn();
+        } else {
+          this.drawCard();
+        }
       });
     }
 
-    // Pass button
-    const passBtn = this.container.querySelector('#uno-pass-btn');
-    if (passBtn) {
-      passBtn.addEventListener('click', () => {
+    // Contextual Pass Chip
+    const passChip = this.container.querySelector('#uno-pass-chip');
+    if (passChip) {
+      passChip.addEventListener('click', () => {
         if (isMyTurn) this.passTurn();
       });
     }
@@ -136,7 +126,7 @@ export class UnoClient {
         const actionId = `uno_call_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         socket.sendGameAction({ type: 'CALL_UNO', actionId }, this.roomId);
         sfx.winFanfare();
-        showToast('📢 UNO Called!', 'success');
+        showToast('📢 أونو! (UNO Called)', 'success');
       });
     }
 
@@ -151,15 +141,17 @@ export class UnoClient {
     });
   }
 
-  handleCardPlay(card) {
+  handleCardPlay(card, cardEl = null) {
     if (this.actionInFlight) return;
     if (card.color === 'wild') {
       this.selectedWildCardId = card.id;
       const modal = this.container.querySelector('#wild-color-modal');
       if (modal) modal.classList.add('active');
     } else {
+      if (cardEl) {
+        cardEl.classList.add('card-play-anim');
+      }
       this.playCard(card.id);
-      this.selectedCardId = null;
     }
   }
 

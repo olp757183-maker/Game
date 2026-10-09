@@ -1021,3 +1021,280 @@
 .uno-game-container.skin-neon .uno-card-oval {
   background: rgba(255, 255, 255, 0.4);
 }
+
+/* --------------------------------------------------------------------------
+   6. Direct Interaction & Animation Enhancements (All Games)
+   -------------------------------------------------------------------------- */
+
+/* Interactive Draw Piles */
+.draw-pile-slot {
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+
+.draw-pile-slot.can-draw {
+  cursor: pointer;
+  animation: pulseGlow 1.8s infinite ease-in-out;
+}
+
+.draw-pile-slot.can-draw:hover {
+  transform: scale(1.05) translateY(-3px);
+}
+
+.draw-pile-slot.can-draw:active {
+  transform: scale(0.98);
+}
+
+/* Direct Boneyard (Domino) */
+.boneyard-pill.can-draw-boneyard {
+  cursor: pointer;
+  animation: pulseGlow 1.8s infinite ease-in-out;
+}
+
+.boneyard-pill.can-draw-boneyard:hover {
+  transform: translateY(-2px);
+}
+
+/* Domino Target Drop Zones & Ends */
+.end-tag.end-target-legal {
+  cursor: pointer;
+  border-color: #10b981 !important;
+  color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.15) !important;
+  transition: all 0.2s ease;
+}
+
+.end-tag.end-target-legal:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.6);
+}
+
+.chain-drop-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.8rem;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.18);
+  border: 2px dashed #10b981;
+  color: #10b981;
+  font-weight: 800;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  animation: pulseTarget 1.5s infinite;
+  user-select: none;
+}
+
+.chain-drop-zone:hover {
+  background: rgba(16, 185, 129, 0.35);
+  transform: scale(1.1);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.8);
+}
+
+.empty-table-placeholder.can-drop-first {
+  cursor: pointer;
+  border: 2px dashed #10b981;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.1);
+  animation: pulseTarget 1.5s infinite;
+}
+
+.empty-table-placeholder.can-drop-first:hover {
+  background: rgba(16, 185, 129, 0.22);
+  transform: scale(1.02);
+}
+
+/* Chess Legal Destination Highlights */
+.square-legal-move {
+  cursor: pointer !important;
+}
+
+.legal-move-dot {
+  width: clamp(10px, 2.4vw, 16px);
+  height: clamp(10px, 2.4vw, 16px);
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.7);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.9);
+  pointer-events: none;
+  z-index: 5;
+  animation: pulseDot 1.6s infinite ease-in-out;
+}
+
+.legal-capture-ring {
+  width: clamp(24px, 6vw, 42px);
+  height: clamp(24px, 6vw, 42px);
+  border-radius: 50%;
+  border: 3px solid rgba(239, 68, 68, 0.85);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.7);
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+  animation: pulseRing 1.4s infinite ease-in-out;
+}
+
+/* Contextual Action Chips (UNO, Domino, Cards) */
+.uno-direct-actions,
+.domino-direct-actions,
+.cards-direct-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  padding: 0.25rem 0.5rem;
+  min-height: 38px;
+}
+
+.uno-pass-chip,
+.domino-pass-chip,
+.cards-pass-chip {
+  border-radius: var(--radius-full);
+  padding: 0.4rem 1.1rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: 1px solid var(--accent);
+  color: var(--text);
+  background: rgba(99, 102, 241, 0.12);
+  transition: all 0.2s ease;
+}
+
+.uno-pass-chip:hover,
+.domino-pass-chip:hover,
+.cards-pass-chip:hover {
+  background: var(--accent);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.pulse-glow {
+  animation: pulseGlow 1.6s infinite ease-in-out;
+}
+
+/* Card & Tile Animation Classes */
+.card-play-anim {
+  animation: cardPlaySlide 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+.card-draw-anim {
+  animation: cardDrawFly 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.tile-place-anim {
+  animation: tilePopPlace 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.shake-anim {
+  animation: shakeReject 0.35s ease;
+}
+
+/* Keyframe Animations */
+@keyframes cardPlaySlide {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-40px) scale(1.08);
+  }
+  100% {
+    transform: translateY(-90px) scale(0.9);
+    opacity: 0.3;
+  }
+}
+
+@keyframes cardDrawFly {
+  0% {
+    transform: scale(0.7) translateY(-30px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes tilePopPlace {
+  0% {
+    transform: scale(0.75);
+    opacity: 0.5;
+  }
+  65% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.85);
+  }
+}
+
+@keyframes pulseTarget {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(16, 185, 129, 0.2);
+    border-color: #10b981;
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.8);
+    border-color: #34d399;
+  }
+}
+
+@keyframes pulseDot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+}
+
+@keyframes pulseRing {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+@keyframes shakeReject {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+/* Reduced Motion Preference Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .pulse-glow,
+  .pulse-target,
+  .legal-move-dot,
+  .legal-capture-ring,
+  .card-play-anim,
+  .shake-anim {
+    animation: none !important;
+  }
+}
+

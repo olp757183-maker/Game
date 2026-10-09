@@ -143,35 +143,32 @@ export function renderUNO(state, options = {}) {
 
       <!-- Game Table / Center Felt Area -->
       <div class="game-table uno-center-table">
-        <!-- Draw Pile -->
-        <div class="draw-pile-slot" id="uno-draw-pile" title="Click to draw card">
+        <!-- Draw Pile (Direct Interactive Element) -->
+        <div class="draw-pile-slot ${isMyTurn ? 'can-draw' : ''}" id="uno-draw-pile" title="${isMyTurn ? (state.hasDrawnThisTurn ? 'اضغط لتمرير الدور أو اسحب' : 'اضغط على الكومة لسحب بطاقة') : 'كومة السحب'}">
           ${renderUnoCardBack({ count: state.deckCount, label: i18n.t('unoDrawBtn') })}
           <span class="pile-label">${i18n.t('unoDrawBtn')} (${state.deckCount})</span>
         </div>
 
         <!-- Discard Pile -->
-        <div class="discard-pile-slot">
+        <div class="discard-pile-slot" id="uno-discard-pile">
           ${state.topDiscard ? renderUnoCard(state.topDiscard, { inHand: false, interactive: false }) : '<div class="empty-pile"></div>'}
           <span class="pile-label">${i18n.t('unoDiscardLabel') || 'Top Card'}</span>
         </div>
       </div>
 
-      <!-- Action Controls -->
-      <div class="game-actions">
-        <div class="action-buttons-group">
-          <button id="uno-call-btn" class="btn btn-warning uno-shout-btn">
-            📣 ${i18n.t('unoCallBtn')}
+      <!-- Turn & Contextual Helper Bar (No standalone action buttons) -->
+      <div class="game-actions uno-direct-actions">
+        ${(state.myHand?.length <= 2) ? `
+          <button id="uno-call-btn" class="btn btn-warning uno-shout-btn pulse-glow">
+            📣 ${i18n.t('unoCallBtn') || 'UNO!'}
           </button>
-          <button id="uno-draw-btn" class="btn btn-primary" ${!isMyTurn ? 'disabled' : ''}>
-            🎴 ${i18n.t('unoDrawBtn')}
+        ` : ''}
+
+        ${isMyTurn && state.hasDrawnThisTurn ? `
+          <button id="uno-pass-chip" class="btn btn-sm btn-outline uno-pass-chip">
+            ⏭ ${i18n.t('unoPassBtn') || 'إنهاء الدور (تمرير)'}
           </button>
-          <button id="uno-play-btn" class="btn btn-success" ${!isMyTurn || !selectedCardId ? 'disabled' : ''}>
-            ▶ ${i18n.t('cardsPlayBtn') || 'العب البطاقة'}
-          </button>
-          <button id="uno-pass-btn" class="btn btn-outline" ${!isMyTurn || (!state.hasDrawnThisTurn && state.pendingDraw === 0) ? 'disabled' : ''}>
-            ⏭ ${i18n.t('unoPassBtn')}
-          </button>
-        </div>
+        ` : ''}
       </div>
 
       <!-- Player Hand Area -->

@@ -437,7 +437,13 @@ function showGameOverOverlay(room, game, isHost, myId) {
 
   const isDraw = Boolean(game?.draw);
   const winner = game?.winner;
+  const loser = game?.loser;
   const reason = game?.reason;
+
+  if (!overlay.dataset.soundPlayed) {
+    overlay.dataset.soundPlayed = 'true';
+    sfx.winFanfare();
+  }
 
   // Rematch consensus state
   const rematchVotes = room.rematchVotes || [];
@@ -449,10 +455,10 @@ function showGameOverOverlay(room, game, isHost, myId) {
   if (game?.scores && Object.keys(game.scores).length > 0) {
     scoresHtml = `
       <div style="margin: 1.25rem 0; padding: 0.75rem; background: rgba(0,0,0,0.25); border-radius: 8px;">
-        <h4 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">النقاط النهائية</h4>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem;">
+        <h4 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">النقاط النهائية (Final Scores)</h4>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8rem;">
           ${Object.entries(game.scores).map(([player, score]) => `
-            <div style="padding: 0.4rem 0.8rem; background: rgba(255,255,255,0.05); border-radius: 6px;">
+            <div style="padding: 0.4rem 0.85rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;">
               <span style="font-size: 0.9rem;">${escapeHtml(player)}:</span>
               <strong style="color: var(--accent); margin-inline-start: 4px;">${score}</strong>
             </div>
@@ -463,27 +469,34 @@ function showGameOverOverlay(room, game, isHost, myId) {
   }
 
   overlay.innerHTML = `
-    <div class="modal-box text-center" style="text-align: center; padding: 2.2rem; max-width: 480px;">
-      <h1 style="font-size: 2.8rem; margin-bottom: 0.25rem;">
+    <div class="modal-box text-center winner-fanfare-modal" style="text-align: center; padding: 2.2rem; max-width: 490px;">
+      <h1 style="font-size: 3rem; margin-bottom: 0.25rem;">
         ${isDraw ? '🤝' : '🏆'}
       </h1>
-      <h2 style="font-size: 1.6rem; margin-bottom: 0.5rem;">
-        ${isDraw ? 'GAME DRAW' : 'GAME OVER'}
+      <h2 style="font-size: 1.6rem; margin-bottom: 0.5rem; letter-spacing: 0.5px;">
+        ${isDraw ? 'تعادل (GAME DRAW)' : 'نهاية المباراة (GAME OVER)'}
       </h2>
 
       ${!isDraw && winner ? `
-        <p style="font-size: 1.3rem; font-weight: 800; color: #10b981; margin: 0.75rem 0;">
-          ${escapeHtml(winner)} Wins!
-        </p>
+        <div class="winner-announcement-box" style="margin: 0.8rem 0;">
+          <p style="font-size: 1.4rem; font-weight: 800; color: #10b981; margin: 0.25rem 0;">
+            🏆 الفائز: ${escapeHtml(winner)}
+          </p>
+          ${loser ? `
+            <p style="font-size: 1rem; font-weight: 600; color: #f87171; margin: 0.25rem 0;">
+              الخاسر: ${escapeHtml(loser)}
+            </p>
+          ` : ''}
+        </div>
       ` : `
-        <p style="font-size: 1.2rem; font-weight: 700; color: var(--text-muted); margin: 0.75rem 0;">
+        <p style="font-size: 1.25rem; font-weight: 700; color: #f59e0b; margin: 0.75rem 0;">
           انتهت المباراة بالتعادل
         </p>
       `}
 
       ${reason ? `
         <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem;">
-          السبب: ${escapeHtml(reason)}
+          سبب النهاية: ${escapeHtml(reason)}
         </p>
       ` : ''}
 

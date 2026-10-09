@@ -12,7 +12,7 @@ export const PIECE_SYMBOLS = {
 };
 
 export function renderChessSquares(state, options = {}) {
-  const { isFlipped = false, selectedSquare = null } = options;
+  const { isFlipped = false, selectedSquare = null, legalDestinations = [] } = options;
   const board = state.board || [];
   let html = '';
 
@@ -27,6 +27,7 @@ export function renderChessSquares(state, options = {}) {
       const piece = board[r]?.[c];
       const isSelected = selectedSquare && selectedSquare.row === r && selectedSquare.col === c;
       const isCheckSquare = state.inCheck && piece && piece.type === 'k' && piece.color === turnColor;
+      const isLegalDest = legalDestinations.some(d => d.row === r && d.col === c);
 
       let pieceHtml = '';
       if (piece) {
@@ -34,13 +35,24 @@ export function renderChessSquares(state, options = {}) {
         pieceHtml = `<span class="chess-piece piece-${piece.color}">${sym}</span>`;
       }
 
+      let indicatorHtml = '';
+      if (isLegalDest) {
+        if (piece) {
+          indicatorHtml = '<span class="legal-capture-ring"></span>';
+        } else {
+          indicatorHtml = '<span class="legal-move-dot"></span>';
+        }
+      }
+
       html += `
         <div class="chess-square ${isDark ? 'square-dark' : 'square-light'}
                     ${isSelected ? 'square-selected' : ''}
-                    ${isCheckSquare ? 'square-check' : ''}"
+                    ${isCheckSquare ? 'square-check' : ''}
+                    ${isLegalDest ? 'square-legal-move' : ''}"
              data-row="${r}"
              data-col="${c}"
-             title="Square ${String.fromCharCode(97 + c)}${8 - r}">
+             title="Square ${String.fromCharCode(97 + c)}${8 - r}${isLegalDest ? ' (حركة قانونية متاحة)' : ''}">
+          ${indicatorHtml}
           ${pieceHtml}
         </div>
       `;
@@ -62,6 +74,7 @@ export function renderChess(state, options = {}) {
   const turnColor = state.currentTurnColor || (state.currentTurn === 'w' || state.currentTurn === 'b' ? state.currentTurn : (state.players?.find(p => p.id === state.currentTurn)?.color) || 'w');
   const isMyTurn = (state.myPlayerId === state.currentTurn) || (state.myPlayerId === state.currentTurnPlayerId) || (myColor === turnColor);
   const selectedSquare = options.selectedSquare || null;
+  const legalDestinations = options.legalDestinations || [];
 
   const whitePlayer = state.players.find(p => p.color === 'w') || { username: 'White', timeLeft: 300 };
   const blackPlayer = state.players.find(p => p.color === 'b') || { username: 'Black', timeLeft: 300 };
@@ -89,7 +102,7 @@ export function renderChess(state, options = {}) {
       <div class="game-board chess-center-board">
         <div class="chess-grid-wrapper">
           <div class="chess-board ${isFlipped ? 'board-flipped' : ''}" id="chess-board-grid">
-            ${renderChessSquares(state, { isFlipped, selectedSquare })}
+            ${renderChessSquares(state, { isFlipped, selectedSquare, legalDestinations })}
           </div>
         </div>
       </div>

@@ -136,14 +136,6 @@ export function renderBaloot(state, options = {}) {
             <button class="btn btn-outline bid-btn" data-bid="pass">⏭ ${i18n.t('balootPass') || 'بس (تمرير)'}</button>
           </div>
         ` : ''}
-
-        ${state.status === 'PLAYING' && isMyTurn ? `
-          <div class="action-buttons-group">
-            <button id="baloot-play-btn" class="btn btn-success" ${!selectedCardId ? 'disabled' : ''}>
-              ▶ العب البطاقة
-            </button>
-          </div>
-        ` : ''}
       </div>
 
       <!-- Player Hand (Bottom Area) -->

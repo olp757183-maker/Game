@@ -358,8 +358,15 @@ export class UnoGame {
       player.hasCalledUno = false;
     }
 
-    // Check round win
+    // Check round win (handling final card effects like Draw Two / Wild Draw Four)
     if (player.hand.length === 0) {
+      if (card.value === UNO_VALUES.DRAW_TWO) {
+        this.pendingDraw += 2;
+        this.applyDrawPenaltyAndAdvance();
+      } else if (card.value === UNO_VALUES.WILD_DRAW_FOUR) {
+        this.pendingDraw += 4;
+        this.applyDrawPenaltyAndAdvance();
+      }
       this.handleRoundWon(player);
       return { success: true, event: 'ROUND_WON', winner: player.username };
     }
@@ -564,10 +571,11 @@ export class UnoGame {
     this.roundWinner = winner.username;
     this.roundPointsAwarded = roundPoints;
 
-    if (this.scores[winner.id] >= target) {
+    if (this.rules.singleRound === true || this.scores[winner.id] >= target) {
       this.status = GAME_STATUS.MATCH_END;
       this.winner = winner.username;
       const otherPlayers = this.players.filter(p => p.id !== winner.id);
+      otherPlayers.sort((a, b) => (this.scores[a.id] || 0) - (this.scores[b.id] || 0));
       this.loser = otherPlayers[0] ? otherPlayers[0].username : null;
       this.draw = false;
       this.reason = 'POINTS_TARGET';
@@ -646,10 +654,15 @@ export class UnoGame {
   handlePlayerLeft(playerId) {
     const idx = this.players.findIndex(p => p.id === playerId);
     if (idx !== -1) {
+      const leavingPlayer = this.players[idx];
       this.players.splice(idx, 1);
       if (this.players.length < 2) {
-        this.status = 'GAME_OVER';
+        this.status = GAME_STATUS.MATCH_END;
         this.winner = this.players[0] ? this.players[0].username : 'None';
+        this.loser = leavingPlayer ? leavingPlayer.username : null;
+        this.draw = false;
+        this.reason = 'PLAYER_LEFT';
+        this.endedAt = Date.now();
       } else {
         this.currentTurnIndex = this.currentTurnIndex % this.players.length;
       }

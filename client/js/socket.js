@@ -56,7 +56,15 @@ class SocketClient {
         timeout: 20000
       });
 
+      const initialTimeout = setTimeout(() => {
+        if (!this.connected) {
+          console.warn('[Socket] Initial connection attempt reached timeout, continuing in background...');
+          resolve(this.socket);
+        }
+      }, 8000);
+
       this.socket.on('connect', () => {
+        clearTimeout(initialTimeout);
         this.connected = true;
         console.log('[Socket] Connected successfully with ID:', this.socket.id);
         this.trigger('connect', this.socket.id);
@@ -82,9 +90,9 @@ class SocketClient {
       this.socket.on('connect_error', (err) => {
         console.error('[Socket] Connection error:', err.message);
         this.trigger('connect_error', err);
-        // Only reject initial connect promise if not yet connected once
-        if (!this.connected) {
-          // Keep promise pending so reconnection attempts can resolve it
+        if (err.message && (err.message.includes('token') || err.message.includes('Authentication'))) {
+          clearTimeout(initialTimeout);
+          reject(err);
         }
       });
 

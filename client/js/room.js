@@ -31,6 +31,7 @@ let currentGameClient = null;
 let activeGameType = null;
 let latestRoomVersion = 0;
 let latestGameVersion = 0;
+let roomLoadTimeout = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   ui.setupGlobalNav();
@@ -69,8 +70,40 @@ document.addEventListener('DOMContentLoaded', async () => {
       handleRoomState({ room: res.room });
     }
   } catch (err) {
-    console.log('[Room] HTTP initial fetch:', err.message);
+    console.warn('[Room] HTTP initial fetch error:', err.message);
+    if (err.status === 404 || (err.message && (err.message.includes('not found') || err.message.includes('غير موجودة')))) {
+      const stage = document.getElementById('game-stage-container');
+      if (stage) {
+        stage.innerHTML = `
+          <div class="waiting-screen">
+            <h2 style="color: #ef4444;">⚠️ الغرفة غير موجودة</h2>
+            <p style="margin: 1.25rem 0; font-size: 1.1rem;">لم يتم العثور على الغرفة المطلوبة، ربما تم إغلاقها أو أن الرمز غير صحيح.</p>
+            <a href="/lobby.html" class="btn btn-primary btn-lg" style="margin-top: 1rem;">🚪 العودة لصالة الألعاب</a>
+          </div>
+        `;
+      }
+      return;
+    }
   }
+
+  // Safety timeout: If room state is not received within 10 seconds, show graceful error notice
+  roomLoadTimeout = setTimeout(() => {
+    if (!currentRoomData) {
+      const stage = document.getElementById('game-stage-container');
+      if (stage && !stage.querySelector('.room-load-error')) {
+        stage.innerHTML = `
+          <div class="waiting-screen room-load-error">
+            <h2 style="color: #f59e0b;">⏳ استغرق تحميل الغرفة وقتاً طويلاً</h2>
+            <p style="margin: 1.25rem 0; font-size: 1.05rem;">لم نتمكن من مزامنة بيانات الغرفة في الوقت المحدد. قد يكون هناك بطء في الاتصال.</p>
+            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
+              <button onclick="window.location.reload()" class="btn btn-primary">🔄 إعادة المحاولة</button>
+              <a href="/lobby.html" class="btn btn-outline">🚪 العودة للصالة</a>
+            </div>
+          </div>
+        `;
+      }
+    }
+  }, 10000);
 
   // Setup Socket Events before connecting
   socket.on(SOCKET_EVENTS.ROOM_STATE, (data) => {
@@ -286,6 +319,11 @@ function handleRoomState(data) {
   const { room, game, isHost: serverIsHost, myPlayerId, version, gameStateVersion } = data;
   if (!room) return;
 
+  if (roomLoadTimeout) {
+    clearTimeout(roomLoadTimeout);
+    roomLoadTimeout = null;
+  }
+
   if (version !== undefined && latestRoomVersion > 0 && version < latestRoomVersion) {
     console.log(`[Room] Stale packet ignored: rev=${version} current=${latestRoomVersion}`);
     return;
@@ -339,9 +377,6 @@ function handleRoomState(data) {
     console.log('Game:', effectiveGame);
   }
 
-  const user = api.getUser() || {};
-  const amHost = (serverIsHost !== undefined) ? serverIsHost : (room.hostId === user.id);
-  const myId = myPlayerId || user.id;
 
   // Update Room Header
   updateRoomHeader(room, amHost);
@@ -816,12 +851,27 @@ function setupRoomDomListeners() {
   const leaveBtn = document.getElementById('leave-room-btn');
   if (leaveBtn) {
     leaveBtn.addEventListener('click', () => {
-      if (confirm('Leave room?')) {
+      const confirmText = i18n.getLanguage() === 'ar' ? 'هل أنت متأكد من مغادرة الغرفة؟' : 'Are you sure you want to leave the room?';
+      if (confirm(confirmText)) {
+        if (roomLoadTimeout) {
+          clearTimeout(roomLoadTimeout);
+          roomLoadTimeout = null;
+        }
         socket.leaveRoom();
         window.location.href = '/lobby.html';
       }
     });
   }
+
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    if (roomLoadTimeout) {
+      clearTimeout(roomLoadTimeout);
+    }
+    if (currentRoomData?.id) {
+      socket.leaveRoom(currentRoomData.id);
+    }
+  });
 
   // Send Chat
   const chatForm = document.getElementById('chat-form');

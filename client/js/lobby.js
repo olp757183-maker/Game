@@ -194,11 +194,13 @@ function setupLobbyEvents() {
     });
   }
 
-  // Create Room Form Submit with disabled button state (Requirement 24)
+  // Create Room Form Submit with disabled button state and duplicate prevention
   const createForm = document.getElementById('create-room-form');
   if (createForm) {
+    let isCreatingRoom = false;
     createForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (isCreatingRoom) return;
 
       const submitBtn = createForm.querySelector('button[type="submit"]');
       const originalText = submitBtn ? submitBtn.textContent : 'إنشاء الغرفة';
@@ -208,6 +210,12 @@ function setupLobbyEvents() {
       const maxPlayers = parseInt(document.getElementById('create-room-max-players')?.value || '4', 10);
       const rules = collectRulesFromForm(gameType);
 
+      if (!gameType) {
+        showToast('يرجى اختيار نوع اللعبة أولاً', 'warning');
+        return;
+      }
+
+      isCreatingRoom = true;
       if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.textContent = '⏳ جاري إنشاء الغرفة...';
@@ -219,14 +227,18 @@ function setupLobbyEvents() {
           submitBtn.textContent = '✅ تم إنشاء الغرفة!';
         }
         sfx.winFanfare();
+        // Redirect to created room
         window.location.href = `/room/${res.room.id}`;
       } catch (err) {
+        isCreatingRoom = false;
+        console.error('[Lobby] Failed to create room:', err);
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = originalText;
         }
         sfx.errorBuzz();
-        showToast(err.message, 'error');
+        const displayMsg = err.message || 'حدث خطأ أثناء محاولة إنشاء الغرفة، يرجى المحاولة ثانية';
+        showToast(displayMsg, 'error');
       }
     });
   }

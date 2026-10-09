@@ -90,8 +90,9 @@ async function runTests() {
     game.currentTurnIndex = 0;
     const top = game.getTopDiscard();
 
+    const matchColor = (top.color === 'wild' || !top.color) ? (game.currentColor || 'red') : top.color;
     // P1 down to 1 card: a Draw 2 matching top color
-    p1.hand = [{ id: 'winning_draw2', color: top.color, value: 'draw2', score: 20 }];
+    p1.hand = [{ id: 'winning_draw2', color: matchColor, value: 'draw2', score: 20 }];
     const p2InitialCount = p2.hand.length;
 
     // P1 plays last card
@@ -121,8 +122,9 @@ async function runTests() {
     game.currentTurnIndex = 0;
     game.rules.targetScore = 50; // low target for test
     const top = game.getTopDiscard();
+    const matchColor7 = (top.color === 'wild' || !top.color) ? (game.currentColor || 'red') : top.color;
 
-    p1.hand = [{ id: 'last_c', color: top.color, value: '7', score: 7 }];
+    p1.hand = [{ id: 'last_c', color: matchColor7, value: '7', score: 7 }];
     p2.hand = [
       { id: 'opp_w1', color: 'wild', value: 'wild', score: 50 },
       { id: 'opp_w2', color: 'wild', value: 'wild', score: 50 }

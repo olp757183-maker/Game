@@ -57,18 +57,38 @@ class ApiService {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers
-    });
+    const controller = new AbortController();
+    const timeoutMs = options.timeout || 12000;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    const data = await response.json().catch(() => ({}));
+    try {
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+        ...options,
+        headers,
+        signal: options.signal || controller.signal
+      });
+      clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      throw new Error(data.error || 'Server request failed');
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const errorMsg = data.errorAr || data.error || 'فشل الطلب من الخادم';
+        const err = new Error(errorMsg);
+        err.status = response.status;
+        err.data = data;
+        throw err;
+      }
+
+      return data;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        const timeoutErr = new Error('استغرقت العملية وقتًا طويلاً، يرجى المحاولة مرة أخرى');
+        timeoutErr.status = 408;
+        throw timeoutErr;
+      }
+      throw err;
     }
-
-    return data;
   }
 
   async register({ username, email, password, confirmPassword, avatar }) {

@@ -175,32 +175,16 @@ export class UnoGame {
       }
     }
 
-    // Flip top card for discard pile (avoid wild draw 4 on start)
+    // Flip top card for discard pile (starter card must be a colored number card 0-9)
     let top = this.drawCardFromDeck();
-    while (top.value === UNO_VALUES.WILD_DRAW_FOUR) {
-      this.deck.unshift(top);
+    while (!top || top.color === UNO_COLORS.WILD || [UNO_VALUES.DRAW_TWO, UNO_VALUES.SKIP, UNO_VALUES.REVERSE, UNO_VALUES.WILD, UNO_VALUES.WILD_DRAW_FOUR].includes(top.value)) {
+      if (top) this.deck.unshift(top);
       this.deck = this.shuffle(this.deck);
       top = this.drawCardFromDeck();
     }
 
     this.discardPile.push(top);
-    if (top.color === UNO_COLORS.WILD) {
-      const colors = [UNO_COLORS.RED, UNO_COLORS.BLUE, UNO_COLORS.GREEN, UNO_COLORS.YELLOW];
-      this.currentColor = colors[Math.floor(Math.random() * colors.length)];
-    } else {
-      this.currentColor = top.color;
-    }
-
-    // Handle initial action card if flipped first
-    if (top.value === UNO_VALUES.DRAW_TWO) {
-      this.pendingDraw = 2;
-    } else if (top.value === UNO_VALUES.REVERSE) {
-      this.direction = -1;
-      this.currentTurnIndex = this.players.length - 1;
-    } else if (top.value === UNO_VALUES.SKIP) {
-      this.advanceTurn();
-    }
-
+    this.currentColor = top.color;
     this.resetTurnTimer();
   }
 

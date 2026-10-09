@@ -286,7 +286,7 @@ export class DominoGame {
     }
     // Place on Right
     else {
-      if (!canRight) throw new Error('حركة غير قانونية');
+      if (!canRight) throw new GameActionError(ERROR_CODES.INVALID_MOVE, 'حركة غير قانونية (هذه الحركة غير مسموحة)', 'Illegal move');
       player.hand.splice(tileIndex, 1);
 
       let placedTile;
@@ -315,10 +315,10 @@ export class DominoGame {
 
   executeDraw(player) {
     if (this.canPlayAnyTile(player)) {
-      throw new Error('حركة غير قانونية');
+      throw new GameActionError(ERROR_CODES.INVALID_ACTION, 'حركة غير قانونية (لديك حجر صالح للعب)', 'Illegal action: tile is playable');
     }
     if (this.boneyard.length === 0) {
-      throw new Error('مخزن القطع فارغ');
+      throw new GameActionError(ERROR_CODES.INVALID_ACTION, 'مخزن القطع فارغ', 'Boneyard is empty');
     }
 
     const drawn = this.boneyard.pop();
@@ -333,10 +333,10 @@ export class DominoGame {
 
   executePass(player) {
     if (this.canPlayAnyTile(player)) {
-      throw new Error('حركة غير قانونية');
+      throw new GameActionError(ERROR_CODES.INVALID_ACTION, 'حركة غير قانونية (لديك حجر صالح للعب)', 'Illegal action: tile is playable');
     }
     if (this.boneyard.length > 0 && this.rules.drawRule !== 'pass') {
-      throw new Error('يجب السحب من المخزن أولاً');
+      throw new GameActionError(ERROR_CODES.INVALID_ACTION, 'يجب السحب من المخزن أولاً', 'Must draw from boneyard first');
     }
 
     this.consecutivePasses++;

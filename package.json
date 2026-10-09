@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server/server.js",
     "dev": "node --watch server/server.js",
-    "test": "node tests/test-runner.js && node tests/test-realtime.js && node tests/test-authoritative-win-loss.js && node tests/test-game-logic-and-lifecycle.js && node tests/test-win-loss-and-interaction.js && node tests/test-all-games-simulation.js && node tests/test-games-ui-rendering.js"
+    "test": "node tests/test-runner.js && node tests/test-realtime.js && node tests/test-authoritative-win-loss.js && node tests/test-game-logic-and-lifecycle.js && node tests/test-win-loss-and-interaction.js && node tests/test-all-games-simulation.js && node tests/test-games-ui-rendering.js && node tests/test-room-lifecycle-full.js"
   },
   "engines": {
     "node": ">=22.5.0"

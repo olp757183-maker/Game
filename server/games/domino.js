@@ -24,16 +24,21 @@ export class DominoGame {
     this.currentTurnIndex = 0;
     this.status = GAME_STATUS.PLAYING;
     this.winner = null;
+    this.winnerId = null;
     this.loser = null;
+    this.loserId = null;
     this.draw = false;
     this.reason = null;
+    this.finishReason = null;
     this.roundWinner = null;
+    this.roundWinnerId = null;
     this.roundPointsAwarded = 0;
     this.roundNumber = 1;
     this.consecutivePasses = 0;
     this.scores = {};
     this.startedAt = Date.now();
     this.endedAt = null;
+    this.finishedAt = null;
     this.version = 1;
 
     this.players.forEach(p => {
@@ -55,6 +60,14 @@ export class DominoGame {
       consecutivePasses: this.consecutivePasses,
       status: this.status,
       winner: this.winner,
+      winnerId: this.winnerId,
+      loser: this.loser,
+      loserId: this.loserId,
+      draw: this.draw,
+      reason: this.reason,
+      finishReason: this.finishReason,
+      endedAt: this.endedAt,
+      finishedAt: this.finishedAt,
       scores: { ...this.scores },
       version: this.version
     };
@@ -74,6 +87,14 @@ export class DominoGame {
     this.consecutivePasses = snap.consecutivePasses;
     this.status = snap.status;
     this.winner = snap.winner;
+    this.winnerId = snap.winnerId;
+    this.loser = snap.loser;
+    this.loserId = snap.loserId;
+    this.draw = snap.draw;
+    this.reason = snap.reason;
+    this.finishReason = snap.finishReason;
+    this.endedAt = snap.endedAt;
+    this.finishedAt = snap.finishedAt;
     this.scores = { ...snap.scores };
     this.version = snap.version;
   }
@@ -340,22 +361,29 @@ export class DominoGame {
 
     this.scores[winner.id] = (this.scores[winner.id] || 0) + pipSum;
     this.roundWinner = winner.username;
+    this.roundWinnerId = winner.id;
     this.roundPointsAwarded = pipSum;
 
     const target = this.rules.targetScore || 100;
+    const isMatchWin = (this.rules.singleRound !== false) || (this.scores[winner.id] >= target);
 
-    if (this.rules.singleRound === true || this.scores[winner.id] >= target) {
+    if (isMatchWin) {
       this.status = GAME_STATUS.MATCH_END;
       this.endedAt = Date.now();
+      this.finishedAt = this.endedAt;
       this.winner = winner.username;
+      this.winnerId = winner.id;
       const otherPlayers = this.players.filter(p => p.id !== winner.id);
       otherPlayers.sort((a, b) => (this.scores[a.id] || 0) - (this.scores[b.id] || 0));
       this.loser = otherPlayers[0] ? otherPlayers[0].username : null;
+      this.loserId = otherPlayers[0] ? otherPlayers[0].id : null;
       this.draw = false;
-      this.reason = isBlocked ? 'فوز بالصكّة' : `وصل إلى نقاط الفوز (${target})`;
+      this.reason = isBlocked ? 'فوز بالصكّة' : (this.scores[winner.id] >= target ? 'POINTS_TARGET' : 'DOMINO_OUT');
+      this.finishReason = isBlocked ? 'BLOCKED_WIN' : (this.scores[winner.id] >= target ? 'POINTS_TARGET' : 'DOMINO_OUT');
     } else {
       this.status = GAME_STATUS.ROUND_END;
       this.reason = isBlocked ? 'انتهت الجولة بالصكّة' : 'أنهى جميع قطعه';
+      this.finishReason = isBlocked ? 'BLOCKED_ROUND' : 'DOMINO_ROUND';
     }
   }
 
@@ -380,11 +408,70 @@ export class DominoGame {
     if (winningPlayer && !isTie) {
       this.handleDominoWin(winningPlayer, true);
     } else {
-      this.status = GAME_STATUS.ROUND_END;
-      this.roundWinner = null;
-      this.draw = true;
-      this.reason = 'تعادل في مجموع نقاط الصكّة';
+      if (this.rules.singleRound !== false) {
+        this.status = GAME_STATUS.MATCH_END;
+        this.endedAt = Date.now();
+        this.finishedAt = this.endedAt;
+        this.winner = null;
+        this.winnerId = null;
+        this.loser = null;
+        this.loserId = null;
+        this.draw = true;
+        this.reason = 'تعادل في مجموع نقاط الصكّة';
+        this.finishReason = 'BLOCKED_TIE';
+      } else {
+        this.status = GAME_STATUS.ROUND_END;
+        this.roundWinner = null;
+        this.roundWinnerId = null;
+        this.draw = true;
+        this.reason = 'تعادل في مجموع نقاط الصكّة';
+        this.finishReason = 'BLOCKED_TIE';
+      }
     }
+  }
+
+  getPublicState() {
+    const current = this.getCurrentPlayer();
+
+    return {
+      gameId: this.gameId,
+      roomId: this.roomId,
+      gameType: 'domino',
+      version: this.version,
+      status: this.status,
+      round: this.roundNumber,
+      roundNumber: this.roundNumber,
+      winner: this.winner,
+      winnerId: this.winnerId,
+      loser: this.loser,
+      loserId: this.loserId,
+      draw: this.draw,
+      reason: this.reason,
+      finishReason: this.finishReason || this.reason,
+      finishedAt: this.finishedAt || this.endedAt,
+      roundWinner: this.roundWinner,
+      roundWinnerId: this.roundWinnerId,
+      roundPointsAwarded: this.roundPointsAwarded,
+      scores: this.scores,
+      rules: this.rules,
+      startedAt: this.startedAt,
+      endedAt: this.endedAt,
+      currentTurn: current ? current.id : null,
+      currentTurnPlayerId: current ? current.id : null,
+      currentTurnIndex: this.currentTurnIndex,
+      board: this.board,
+      leftEnd: this.leftEnd,
+      rightEnd: this.rightEnd,
+      boneyardCount: this.boneyard.length,
+      players: this.players.map(p => ({
+        id: p.id,
+        username: p.username,
+        avatar: p.avatar,
+        seat: p.seat,
+        tileCount: p.hand.length,
+        score: this.scores[p.id] || 0
+      }))
+    };
   }
 
   getStateForPlayer(playerId) {
@@ -401,10 +488,15 @@ export class DominoGame {
       round: this.roundNumber,
       roundNumber: this.roundNumber,
       winner: this.winner,
+      winnerId: this.winnerId,
       loser: this.loser,
+      loserId: this.loserId,
       draw: this.draw,
       reason: this.reason,
+      finishReason: this.finishReason || this.reason,
+      finishedAt: this.finishedAt || this.endedAt,
       roundWinner: this.roundWinner,
+      roundWinnerId: this.roundWinnerId,
       roundPointsAwarded: this.roundPointsAwarded,
       scores: this.scores,
       rules: this.rules,
@@ -444,9 +536,14 @@ export class DominoGame {
       if (this.players.length < 2 && this.status !== GAME_STATUS.MATCH_END && this.status !== GAME_STATUS.FINISHED) {
         this.status = GAME_STATUS.MATCH_END;
         this.endedAt = Date.now();
+        this.finishedAt = this.endedAt;
         this.winner = this.players[0] ? this.players[0].username : 'None';
+        this.winnerId = this.players[0] ? this.players[0].id : null;
         this.loser = leaver ? leaver.username : playerId;
-        this.reason = 'انسحاب لاعب';
+        this.loserId = leaver ? leaver.id : playerId;
+        this.draw = false;
+        this.reason = 'PLAYER_LEFT';
+        this.finishReason = 'PLAYER_LEFT';
       } else {
         this.currentTurnIndex = this.currentTurnIndex % this.players.length;
       }

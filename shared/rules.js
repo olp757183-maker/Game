@@ -12,7 +12,8 @@ export const UNO_DEFAULT_RULES = {
   sevenZero: false,           // 7 = swap hands, 0 = pass hand along
   drawUntilPlayable: false,   // Keep drawing until a valid card is drawn
   progressive: true,          // Draw cards compound across players
-  targetScore: 500,           // Points to trigger match win
+  singleRound: true,          // Match ends on empty hand unless multiRound configured
+  targetScore: 500,           // Points to trigger match win in multi-round mode
   turnTimer: 60               // 0 = off, 30, 60, 120 seconds
 };
 
@@ -33,6 +34,7 @@ export const CHESS_DEFAULT_RULES = {
 
 export const DOMINO_DEFAULT_RULES = {
   startingTiles: 7,           // 7 tiles for 2 players, 5 for 3-4
+  singleRound: true,          // Match ends on domino out unless multiRound configured
   targetScore: 100,           // Match winning score
   drawRule: 'boneyard',       // 'boneyard' (draw till playable or empty) or 'pass'
   turnTimer: 45               // Seconds per turn
@@ -40,6 +42,7 @@ export const DOMINO_DEFAULT_RULES = {
 
 export const CARDS_DEFAULT_RULES = {
   startingCards: 5,           // Cards dealt per player
+  singleRound: true,          // Match ends on shedding all cards
   matchingMode: 'rank_or_suit',// Match top card by rank or suit
   specialCards: true,         // 2 draws 2, 8 changes suit, A skips, J reverses
   targetScore: 100,           // Target penalty points for match end
@@ -83,6 +86,7 @@ export function getEffectiveRules(gameType, customRules = {}) {
       if (typeof customRules.sevenZero === 'boolean') effective.sevenZero = customRules.sevenZero;
       if (typeof customRules.drawUntilPlayable === 'boolean') effective.drawUntilPlayable = customRules.drawUntilPlayable;
       if (typeof customRules.progressive === 'boolean') effective.progressive = customRules.progressive;
+      if (typeof customRules.singleRound === 'boolean') effective.singleRound = customRules.singleRound;
       if (typeof customRules.targetScore === 'number' && customRules.targetScore >= 1 && customRules.targetScore <= 2000) {
         effective.targetScore = Math.floor(customRules.targetScore);
       }
@@ -117,6 +121,7 @@ export function getEffectiveRules(gameType, customRules = {}) {
       if (typeof customRules.startingTiles === 'number' && customRules.startingTiles >= 1 && customRules.startingTiles <= 7) {
         effective.startingTiles = Math.floor(customRules.startingTiles);
       }
+      if (typeof customRules.singleRound === 'boolean') effective.singleRound = customRules.singleRound;
       if (typeof customRules.targetScore === 'number' && customRules.targetScore >= 1) {
         effective.targetScore = Math.floor(customRules.targetScore);
       }
@@ -132,6 +137,7 @@ export function getEffectiveRules(gameType, customRules = {}) {
       if (typeof customRules.startingCards === 'number' && customRules.startingCards >= 1 && customRules.startingCards <= 10) {
         effective.startingCards = Math.floor(customRules.startingCards);
       }
+      if (typeof customRules.singleRound === 'boolean') effective.singleRound = customRules.singleRound;
       if (typeof customRules.specialCards === 'boolean') effective.specialCards = customRules.specialCards;
       if (typeof customRules.targetScore === 'number' && customRules.targetScore >= 1) {
         effective.targetScore = Math.floor(customRules.targetScore);

@@ -42,12 +42,17 @@ export class BalootGame {
     this.teamScores = [0, 0]; // Game points (target 152)
     this.status = 'BIDDING'; // BIDDING, PLAYING, ROUND_END, MATCH_END, FINISHED
     this.winner = null;
+    this.winnerId = null;
     this.loser = null;
+    this.loserId = null;
+    this.winningTeam = null;
     this.draw = false;
     this.reason = null;
+    this.finishReason = null;
     this.roundNumber = 1;
     this.startedAt = Date.now();
     this.endedAt = null;
+    this.finishedAt = null;
     this.version = 1;
   }
 
@@ -60,6 +65,16 @@ export class BalootGame {
       deck: this.deck ? this.deck.map(c => ({ ...c })) : [],
       floorCard: this.floorCard ? { ...this.floorCard } : null,
       status: this.status,
+      winner: this.winner,
+      winnerId: this.winnerId,
+      loser: this.loser,
+      loserId: this.loserId,
+      winningTeam: this.winningTeam,
+      draw: this.draw,
+      reason: this.reason,
+      finishReason: this.finishReason,
+      endedAt: this.endedAt,
+      finishedAt: this.finishedAt,
       contract: this.contract ? { ...this.contract } : null,
       currentTrick: this.currentTrick ? this.currentTrick.map(t => ({ ...t, card: { ...t.card } })) : [],
       tricksCompleted: this.tricksCompleted,
@@ -82,6 +97,16 @@ export class BalootGame {
     this.deck = snap.deck ? snap.deck.map(c => ({ ...c })) : [];
     this.floorCard = snap.floorCard ? { ...snap.floorCard } : null;
     this.status = snap.status;
+    this.winner = snap.winner;
+    this.winnerId = snap.winnerId;
+    this.loser = snap.loser;
+    this.loserId = snap.loserId;
+    this.winningTeam = snap.winningTeam;
+    this.draw = snap.draw;
+    this.reason = snap.reason;
+    this.finishReason = snap.finishReason;
+    this.endedAt = snap.endedAt;
+    this.finishedAt = snap.finishedAt;
     this.contract = snap.contract ? { ...snap.contract } : null;
     this.currentTrick = snap.currentTrick ? snap.currentTrick.map(t => ({ ...t, card: { ...t.card } })) : [];
     this.tricksCompleted = snap.tricksCompleted;
@@ -454,14 +479,25 @@ export class BalootGame {
 
     const target = this.rules.targetScore || 152;
     if (this.teamScores[0] >= target || this.teamScores[1] >= target) {
-      this.status = GAME_STATUS.MATCH_END;
-      this.endedAt = Date.now();
-      const winningTeamIdx = this.teamScores[0] >= this.teamScores[1] ? 0 : 1;
-      const winningPlayers = this.players.filter(p => p.team === winningTeamIdx).map(p => p.username).join(' & ');
-      const losingPlayers = this.players.filter(p => p.team !== winningTeamIdx).map(p => p.username).join(' & ');
-      this.winner = `فريق ${winningTeamIdx === 0 ? '1' : '2'} (${winningPlayers})`;
-      this.loser = `فريق ${winningTeamIdx === 0 ? '2' : '1'} (${losingPlayers})`;
-      this.reason = `وصل إلى نقاط الفوز المطلوبة (${target})`;
+      if (this.teamScores[0] === this.teamScores[1]) {
+        // Tied at target score: play another tiebreaker round!
+        this.status = GAME_STATUS.ROUND_END;
+        this.roundNumber++;
+        this.dealerIndex = (this.dealerIndex + 1) % 4;
+      } else {
+        this.status = GAME_STATUS.MATCH_END;
+        this.endedAt = Date.now();
+        this.finishedAt = this.endedAt;
+        const winningTeamIdx = this.teamScores[0] > this.teamScores[1] ? 0 : 1;
+        this.winningTeam = winningTeamIdx;
+        const winningPlayers = this.players.filter(p => p.team === winningTeamIdx).map(p => p.username).join(' & ');
+        const losingPlayers = this.players.filter(p => p.team !== winningTeamIdx).map(p => p.username).join(' & ');
+        this.winner = `فريق ${winningTeamIdx === 0 ? '1' : '2'} (${winningPlayers})`;
+        this.loser = `فريق ${winningTeamIdx === 0 ? '2' : '1'} (${losingPlayers})`;
+        this.draw = false;
+        this.reason = `وصل إلى نقاط الفوز المطلوبة (${target})`;
+        this.finishReason = 'TARGET_REACHED';
+      }
     } else {
       this.status = GAME_STATUS.ROUND_END;
       this.roundNumber++;
@@ -472,6 +508,55 @@ export class BalootGame {
   startNextRound() {
     if (this.status !== GAME_STATUS.ROUND_END) return;
     this.startRound();
+  }
+
+  getPublicState() {
+    const current = this.getCurrentPlayer();
+
+    return {
+      gameId: this.gameId,
+      roomId: this.roomId,
+      gameType: 'baloot',
+      version: this.version,
+      status: this.status,
+      round: this.roundNumber,
+      roundNumber: this.roundNumber,
+      winner: this.winner,
+      winnerId: this.winnerId,
+      loser: this.loser,
+      loserId: this.loserId,
+      winningTeam: this.winningTeam,
+      draw: this.draw,
+      reason: this.reason,
+      finishReason: this.finishReason || this.reason,
+      finishedAt: this.finishedAt || this.endedAt,
+      startedAt: this.startedAt,
+      endedAt: this.endedAt,
+      scores: {
+        'فريق 1': this.teamScores[0],
+        'فريق 2': this.teamScores[1]
+      },
+      rules: this.rules,
+      dealerSeat: this.dealerIndex,
+      currentTurn: current ? current.id : null,
+      currentTurnPlayerId: current ? current.id : null,
+      currentTurnSeat: this.currentTurnIndex,
+      biddingRound: this.biddingRound,
+      floorCard: this.floorCard,
+      contract: this.contract,
+      currentTrick: this.currentTrick,
+      tricksCompleted: this.tricksCompleted,
+      teamScores: this.teamScores,
+      teamAbnat: this.teamAbnat,
+      players: this.players.map(p => ({
+        id: p.id,
+        username: p.username,
+        avatar: p.avatar,
+        seat: p.seat,
+        team: p.team,
+        cardCount: p.hand.length
+      }))
+    };
   }
 
   getStateForPlayer(playerId) {
@@ -488,9 +573,14 @@ export class BalootGame {
       round: this.roundNumber,
       roundNumber: this.roundNumber,
       winner: this.winner,
+      winnerId: this.winnerId,
       loser: this.loser,
+      loserId: this.loserId,
+      winningTeam: this.winningTeam,
       draw: this.draw,
       reason: this.reason,
+      finishReason: this.finishReason || this.reason,
+      finishedAt: this.finishedAt || this.endedAt,
       startedAt: this.startedAt,
       endedAt: this.endedAt,
       scores: {
@@ -530,11 +620,14 @@ export class BalootGame {
     if (this.status !== GAME_STATUS.MATCH_END && this.status !== GAME_STATUS.FINISHED) {
       this.status = GAME_STATUS.MATCH_END;
       this.endedAt = Date.now();
+      this.finishedAt = this.endedAt;
       const leaver = this.players.find(p => p.id === playerId);
       const remaining = this.players.filter(p => p.id !== playerId);
       this.winner = remaining.map(p => p.username).join(', ');
       this.loser = leaver ? leaver.username : playerId;
+      this.loserId = leaver ? leaver.id : playerId;
       this.reason = 'انسحاب لاعب';
+      this.finishReason = 'PLAYER_LEFT';
     }
   }
 }

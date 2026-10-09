@@ -59,6 +59,9 @@ export class BalootClient {
   }
 
   attachEventListeners() {
+    if (this.state.status === 'MATCH_END' || this.state.status === 'FINISHED' || this.state.status === 'GAME_OVER' || this.state.status === 'ROUND_END') {
+      return;
+    }
     const myId = this.state.myPlayerId;
     const isMyTurn = (this.state.currentTurnPlayerId === myId);
 

@@ -28,8 +28,11 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 let currentRoomData = null;
+let currentGameData = null;
 let currentGameClient = null;
 let activeGameType = null;
+let latestRoomVersion = 0;
+let latestGameVersion = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
   ui.setupGlobalNav();
@@ -71,28 +74,64 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('[Room] HTTP initial fetch:', err.message);
   }
 
-  // Version tracking to enforce in-order packet processing
-  let latestRoomVersion = 0;
-  let latestGameVersion = 0;
-
   // Setup Socket Events before connecting
   socket.on(SOCKET_EVENTS.ROOM_STATE, (data) => {
     handleRoomState(data);
   });
 
   socket.on(SOCKET_EVENTS.GAME_STATE, (gameData) => {
+    if (!gameData) return;
+    currentGameData = gameData;
+    const user = api.getUser() || {};
+    gameData.myPlayerId = gameData.myPlayerId || user.id;
+
     if (currentRoomData && currentGameClient) {
-      const user = api.getUser() || {};
-      gameData.myPlayerId = gameData.myPlayerId || user.id;
-      currentGameClient.update(gameData);
+      try {
+        currentGameClient.update(gameData);
+      } catch (err) {
+        console.warn('[Room] Client update error on GAME_STATE:', err);
+      }
+    }
+
+    if (currentRoomData) {
+      const amHost = (currentRoomData.hostId === user.id);
+      if (gameData.status === 'MATCH_END' || gameData.status === 'FINISHED' || gameData.status === 'GAME_OVER') {
+        const existingRoundModal = document.getElementById('round-end-overlay');
+        if (existingRoundModal) existingRoundModal.remove();
+        showGameOverOverlay(currentRoomData, gameData, amHost, user.id);
+      } else if (gameData.status === 'ROUND_END') {
+        showRoundEndOverlay(currentRoomData, gameData, amHost, user.id);
+      }
     }
   });
 
   socket.on('room:public-state', (data) => {
     if (data && data.room) {
-      // Keep existing active game if public event has null game
-      const existingGame = currentRoomData?.game;
-      handleRoomState({ room: data.room, game: data.game || existingGame });
+      const effectiveGame = data.game || currentGameData || null;
+      handleRoomState({ room: data.room, game: effectiveGame });
+    }
+  });
+
+  socket.on(SOCKET_EVENTS.REMATCH_UPDATE, (data) => {
+    console.log('[Room] Rematch update:', data);
+    const overlay = document.getElementById('game-over-overlay');
+    if (overlay && currentRoomData) {
+      const rematchBtn = overlay.querySelector('#rematch-btn');
+      if (rematchBtn) {
+        const myId = api.getUser()?.id;
+        const votes = data.votes || [];
+        const hasVoted = votes.includes(myId) || rematchBtn.classList.contains('btn-secondary');
+        const count = data.votedCount !== undefined ? data.votedCount : votes.length;
+        const total = data.totalNeeded || currentRoomData.players.length;
+        rematchBtn.textContent = hasVoted
+          ? `⏳ في انتظار بقية اللاعبين (${count} / ${total})`
+          : `🔄 إعادة المباراة (${count} / ${total})`;
+        if (hasVoted) {
+          rematchBtn.disabled = true;
+          rematchBtn.classList.add('btn-secondary');
+          rematchBtn.classList.remove('btn-primary');
+        }
+      }
     }
   });
 
@@ -226,11 +265,15 @@ function handleRoomState(data) {
   if (gameStateVersion) latestGameVersion = gameStateVersion;
 
   currentRoomData = room;
+  if (game) {
+    currentGameData = game;
+  }
+  const effectiveGame = game || currentGameData || null;
 
   if (window.DEBUG_GAME) {
     console.log('[GAME STATE UPDATE]');
     console.log('Room:', room.id, 'Code:', room.code, 'Players:', room.players?.length);
-    console.log('Game:', game);
+    console.log('Game:', effectiveGame);
   }
 
   const user = api.getUser() || {};
@@ -243,56 +286,74 @@ function handleRoomState(data) {
   // Update Players Sidebar
   updatePlayersSidebar(room.players, room.hostId, myId);
 
-  // If status is WAITING: Render waiting lobby
+  // Stage container
   const stage = document.getElementById('game-stage-container');
   if (!stage) return;
 
   const existingOverlay = document.getElementById('game-over-overlay');
   const existingRoundModal = document.getElementById('round-end-overlay');
 
+  const isGameOver = room.status === 'FINISHED' || (effectiveGame && (effectiveGame.status === 'MATCH_END' || effectiveGame.status === 'FINISHED' || effectiveGame.status === 'GAME_OVER'));
+  const isRoundOver = !isGameOver && effectiveGame && effectiveGame.status === 'ROUND_END';
+
   if (room.status === 'WAITING') {
     if (existingOverlay) existingOverlay.remove();
     if (existingRoundModal) existingRoundModal.remove();
     renderWaitingLobby(stage, room, amHost);
     currentGameClient = null;
-  } else if (room.status === 'PLAYING') {
+    currentGameData = null;
+  } else if (isGameOver) {
+    if (existingRoundModal) existingRoundModal.remove();
+
+    if (!currentGameClient || activeGameType !== room.gameType) {
+      activeGameType = room.gameType;
+      currentGameClient = createGameClient(room.gameType, stage, room.id);
+    }
+    if (currentGameClient && effectiveGame) {
+      try {
+        effectiveGame.myPlayerId = myId;
+        currentGameClient.update(effectiveGame);
+      } catch (renderErr) {
+        console.warn('Game client final render error:', renderErr);
+      }
+    }
+    showGameOverOverlay(room, effectiveGame, amHost, myId);
+  } else if (isRoundOver) {
     if (existingOverlay) existingOverlay.remove();
 
-    // Mount or update Game Client
+    if (!currentGameClient || activeGameType !== room.gameType) {
+      activeGameType = room.gameType;
+      currentGameClient = createGameClient(room.gameType, stage, room.id);
+    }
+    if (currentGameClient && effectiveGame) {
+      try {
+        effectiveGame.myPlayerId = myId;
+        currentGameClient.update(effectiveGame);
+      } catch (renderErr) {
+        console.warn('Game client round end render error:', renderErr);
+      }
+    }
+    showRoundEndOverlay(room, effectiveGame, amHost, myId);
+  } else if (room.status === 'PLAYING') {
+    if (existingOverlay) existingOverlay.remove();
+    if (existingRoundModal) existingRoundModal.remove();
+
     if (!currentGameClient || activeGameType !== room.gameType) {
       activeGameType = room.gameType;
       currentGameClient = createGameClient(room.gameType, stage, room.id);
     }
 
-    if (currentGameClient && game) {
+    if (currentGameClient && effectiveGame) {
       try {
-        game.myPlayerId = myId;
-        currentGameClient.update(game);
+        effectiveGame.myPlayerId = myId;
+        currentGameClient.update(effectiveGame);
       } catch (renderErr) {
         console.error('[Room] Game client render caught error:', renderErr);
-        // Resync safely without reloading page!
         setTimeout(() => {
           socket.syncState(room.id);
         }, 500);
       }
     }
-
-    // Check if round or match ended
-    if (game && game.status === 'ROUND_END') {
-      showRoundEndOverlay(room, game, amHost, myId);
-    } else if (game && (game.status === 'MATCH_END' || game.status === 'FINISHED' || game.status === 'GAME_OVER')) {
-      if (existingRoundModal) existingRoundModal.remove();
-      showGameOverOverlay(room, game, amHost, myId);
-    } else {
-      if (existingRoundModal) existingRoundModal.remove();
-    }
-  } else if (room.status === 'FINISHED') {
-    if (existingRoundModal) existingRoundModal.remove();
-    if (currentGameClient && game) {
-      game.myPlayerId = myId;
-      currentGameClient.update(game);
-    }
-    showGameOverOverlay(room, game, amHost, myId);
   }
 }
 
@@ -435,20 +496,46 @@ function showGameOverOverlay(room, game, isHost, myId) {
     document.body.appendChild(overlay);
   }
 
+  const user = api.getUser() || {};
+  const currentUsername = user.username || '';
+  const currentUserId = myId || user.id;
+
   const isDraw = Boolean(game?.draw);
   const winner = game?.winner;
+  const winnerId = game?.winnerId;
   const loser = game?.loser;
-  const reason = game?.reason;
+  const loserId = game?.loserId;
+  const winningTeam = game?.winningTeam;
+  const reason = game?.finishReason || game?.reason;
+
+  const myTeam = room?.players?.find(p => p.id === currentUserId)?.team;
+  const amWinner = !isDraw && (
+    (winnerId && winnerId === currentUserId) ||
+    (winner && (winner === currentUsername || winner.includes(currentUsername))) ||
+    (winningTeam !== undefined && winningTeam !== null && myTeam === winningTeam)
+  );
+
+  const amLoser = !isDraw && !amWinner && (
+    (loserId && loserId === currentUserId) ||
+    (loser && (loser === currentUsername || loser.includes(currentUsername))) ||
+    (winningTeam !== undefined && winningTeam !== null && myTeam !== undefined && myTeam !== winningTeam)
+  );
 
   if (!overlay.dataset.soundPlayed) {
     overlay.dataset.soundPlayed = 'true';
-    sfx.winFanfare();
+    if (amWinner) {
+      sfx.winFanfare();
+    } else if (isDraw) {
+      sfx.click();
+    } else {
+      sfx.errorBuzz();
+    }
   }
 
   // Rematch consensus state
   const rematchVotes = room.rematchVotes || [];
   const rematchNeeded = room.rematchNeeded || room.players.length;
-  const hasVotedRematch = rematchVotes.includes(myId);
+  const hasVotedRematch = rematchVotes.includes(currentUserId);
 
   // Scores breakdown
   let scoresHtml = '';
@@ -468,47 +555,76 @@ function showGameOverOverlay(room, game, isHost, myId) {
     `;
   }
 
+  let statusHeader = '';
+  let statusBanner = '';
+
+  if (isDraw) {
+    statusHeader = `
+      <h1 style="font-size: 3.2rem; margin-bottom: 0.25rem;">🤝</h1>
+      <h2 style="font-size: 1.6rem; margin-bottom: 0.5rem; color: #f59e0b; font-weight: 800;">انتهت المباراة بالتعادل (DRAW)</h2>
+    `;
+    statusBanner = `<p style="font-size: 1.15rem; font-weight: 700; color: #f59e0b; margin: 0.5rem 0;">تعادل الفريقان / اللاعبان</p>`;
+  } else if (amWinner) {
+    statusHeader = `
+      <h1 style="font-size: 3.2rem; margin-bottom: 0.25rem;">🎉</h1>
+      <h2 style="font-size: 1.6rem; margin-bottom: 0.5rem; color: #10b981; font-weight: 800;">مبروك! لقد فزت بالمباراة! (VICTORY)</h2>
+    `;
+    statusBanner = `
+      <div class="winner-announcement-box" style="margin: 0.8rem 0; padding: 0.75rem; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; border-radius: 8px;">
+        <p style="font-size: 1.3rem; font-weight: 800; color: #10b981; margin: 0.25rem 0;">
+          🏆 أنت الفائز باللقاء!
+        </p>
+        ${loser ? `<p style="font-size: 0.95rem; color: var(--text-muted); margin: 0.2rem 0;">الخاسر: ${escapeHtml(loser)}</p>` : ''}
+      </div>
+    `;
+  } else if (amLoser) {
+    statusHeader = `
+      <h1 style="font-size: 3.2rem; margin-bottom: 0.25rem;">💔</h1>
+      <h2 style="font-size: 1.6rem; margin-bottom: 0.5rem; color: #ef4444; font-weight: 800;">حظاً أوفر في المرة القادمة (DEFEAT)</h2>
+    `;
+    statusBanner = `
+      <div class="winner-announcement-box" style="margin: 0.8rem 0; padding: 0.75rem; background: rgba(239, 68, 68, 0.12); border: 1px solid #ef4444; border-radius: 8px;">
+        <p style="font-size: 1.2rem; font-weight: 800; color: #ef4444; margin: 0.25rem 0;">
+          خسارة المباراة
+        </p>
+        ${winner ? `<p style="font-size: 1rem; color: #10b981; font-weight: 700; margin: 0.2rem 0;">الفائز: ${escapeHtml(winner)}</p>` : ''}
+      </div>
+    `;
+  } else {
+    // Spectator view
+    statusHeader = `
+      <h1 style="font-size: 3.2rem; margin-bottom: 0.25rem;">🏆</h1>
+      <h2 style="font-size: 1.6rem; margin-bottom: 0.5rem; letter-spacing: 0.5px;">نهاية المباراة (GAME OVER)</h2>
+    `;
+    statusBanner = `
+      <div class="winner-announcement-box" style="margin: 0.8rem 0;">
+        ${winner ? `<p style="font-size: 1.3rem; font-weight: 800; color: #10b981; margin: 0.25rem 0;">🏆 الفائز: ${escapeHtml(winner)}</p>` : ''}
+        ${loser ? `<p style="font-size: 1rem; font-weight: 600; color: #f87171; margin: 0.25rem 0;">الخاسر: ${escapeHtml(loser)}</p>` : ''}
+      </div>
+    `;
+  }
+
   overlay.innerHTML = `
     <div class="modal-box text-center winner-fanfare-modal" style="text-align: center; padding: 2.2rem; max-width: 490px;">
-      <h1 style="font-size: 3rem; margin-bottom: 0.25rem;">
-        ${isDraw ? '🤝' : '🏆'}
-      </h1>
-      <h2 style="font-size: 1.6rem; margin-bottom: 0.5rem; letter-spacing: 0.5px;">
-        ${isDraw ? 'تعادل (GAME DRAW)' : 'نهاية المباراة (GAME OVER)'}
-      </h2>
-
-      ${!isDraw && winner ? `
-        <div class="winner-announcement-box" style="margin: 0.8rem 0;">
-          <p style="font-size: 1.4rem; font-weight: 800; color: #10b981; margin: 0.25rem 0;">
-            🏆 الفائز: ${escapeHtml(winner)}
-          </p>
-          ${loser ? `
-            <p style="font-size: 1rem; font-weight: 600; color: #f87171; margin: 0.25rem 0;">
-              الخاسر: ${escapeHtml(loser)}
-            </p>
-          ` : ''}
-        </div>
-      ` : `
-        <p style="font-size: 1.25rem; font-weight: 700; color: #f59e0b; margin: 0.75rem 0;">
-          انتهت المباراة بالتعادل
-        </p>
-      `}
+      ${statusHeader}
+      ${statusBanner}
 
       ${reason ? `
-        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem;">
-          سبب النهاية: ${escapeHtml(reason)}
-        </p>
+        <div style="margin: 0.5rem 0; padding: 0.35rem 0.75rem; background: rgba(255,255,255,0.06); border-radius: 6px; display: inline-block;">
+          <span style="color: var(--text-muted); font-size: 0.85rem;">سبب النهاية: </span>
+          <strong style="color: var(--text-color); font-size: 0.85rem;">${escapeHtml(reason)}</strong>
+        </div>
       ` : ''}
 
       ${scoresHtml}
 
       <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; align-items: center;">
         <button id="rematch-btn" class="btn ${hasVotedRematch ? 'btn-secondary' : 'btn-primary'} btn-lg" style="width: 100%; max-width: 320px;" ${hasVotedRematch ? 'disabled' : ''}>
-          ${hasVotedRematch ? `⏳ في انتظار بقية اللاعبين (${rematchVotes.length} / ${rematchNeeded})` : `🔄 إعادة المباراة (${rematchVotes.length} / ${rematchNeeded})`}
+          ${hasVotedRematch ? `⏳ في انتظار بقية اللاعبين (${rematchVotes.length} / ${rematchNeeded})` : `🔄 طلب إعادة المباراة (${rematchVotes.length} / ${rematchNeeded})`}
         </button>
 
         <button id="exit-to-lobby-btn" class="btn btn-outline" style="width: 100%; max-width: 320px;">
-          🚪 العودة إلى قائمة الغرف
+          🚪 العودة إلى صالة الألعاب
         </button>
       </div>
     </div>

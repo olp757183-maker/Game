@@ -64,6 +64,9 @@ export class ChessClient {
   }
 
   attachEventListeners() {
+    if (this.state.status === 'MATCH_END' || this.state.status === 'FINISHED' || this.state.status === 'GAME_OVER') {
+      return;
+    }
     const squares = this.container.querySelectorAll('.chess-square');
     squares.forEach(sq => {
       sq.addEventListener('click', () => {

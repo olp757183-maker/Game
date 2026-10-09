@@ -28,9 +28,12 @@ export class ChessGame {
     };
     this.status = GAME_STATUS.PLAYING;
     this.winner = null;
+    this.winnerId = null;
     this.loser = null;
+    this.loserId = null;
     this.draw = false;
     this.reason = null;
+    this.finishReason = null;
     this.round = 1;
     this.scores = {};
     for (const p of this.players) {
@@ -40,6 +43,7 @@ export class ChessGame {
     this.drawOfferedBy = null;
     this.startedAt = Date.now();
     this.endedAt = null;
+    this.finishedAt = null;
     this.lastMoveTimestamp = Date.now();
     this.timerInterval = null;
     this.version = 1;
@@ -58,9 +62,14 @@ export class ChessGame {
       status: this.status,
       inCheck: this.inCheck,
       winner: this.winner,
+      winnerId: this.winnerId,
       loser: this.loser,
+      loserId: this.loserId,
       draw: this.draw,
       reason: this.reason,
+      finishReason: this.finishReason,
+      endedAt: this.endedAt,
+      finishedAt: this.finishedAt,
       scores: { ...this.scores },
       players: this.players.map(p => ({ ...p })),
       version: this.version
@@ -80,9 +89,14 @@ export class ChessGame {
     this.status = snap.status;
     this.inCheck = snap.inCheck;
     this.winner = snap.winner;
+    this.winnerId = snap.winnerId;
     this.loser = snap.loser;
+    this.loserId = snap.loserId;
     this.draw = snap.draw;
     this.reason = snap.reason;
+    this.finishReason = snap.finishReason;
+    this.endedAt = snap.endedAt;
+    this.finishedAt = snap.finishedAt;
     this.scores = { ...snap.scores };
     this.players = snap.players.map(p => ({ ...p }));
     this.version = snap.version;
@@ -128,11 +142,15 @@ export class ChessGame {
           activePlayer.timeLeft = 0;
           this.status = GAME_STATUS.MATCH_END;
           this.endedAt = Date.now();
+          this.finishedAt = this.endedAt;
           const opponent = this.players.find(p => p.color !== this.currentTurn);
           this.winner = opponent ? opponent.username : null;
+          this.winnerId = opponent ? opponent.id : null;
           this.loser = activePlayer.username;
+          this.loserId = activePlayer.id;
           this.draw = false;
           this.reason = 'TIMEOUT';
+          this.finishReason = 'TIMEOUT';
           if (opponent) this.scores[opponent.username] = (this.scores[opponent.username] || 0) + 1;
           clearInterval(this.timerInterval);
         }
@@ -466,20 +484,27 @@ export class ChessGame {
     const opponentMoves = this.getLegalMoves(nextColor);
     if (opponentMoves.length === 0) {
       this.endedAt = Date.now();
+      this.finishedAt = this.endedAt;
       const opponentPlayer = this.players.find(p => p.color === nextColor);
       if (this.inCheck) {
         this.status = GAME_STATUS.MATCH_END;
         this.winner = player.username;
+        this.winnerId = player.id;
         this.loser = opponentPlayer ? opponentPlayer.username : null;
+        this.loserId = opponentPlayer ? opponentPlayer.id : null;
         this.draw = false;
         this.reason = 'CHECKMATE';
+        this.finishReason = 'CHECKMATE';
         this.scores[player.username] = (this.scores[player.username] || 0) + 1;
       } else {
         this.status = GAME_STATUS.MATCH_END;
         this.winner = null;
+        this.winnerId = null;
         this.loser = null;
+        this.loserId = null;
         this.draw = true;
         this.reason = 'STALEMATE';
+        this.finishReason = 'STALEMATE';
         for (const p of this.players) {
           this.scores[p.username] = (this.scores[p.username] || 0) + 0.5;
         }
@@ -493,11 +518,15 @@ export class ChessGame {
   executeResign(player) {
     this.status = GAME_STATUS.MATCH_END;
     this.endedAt = Date.now();
+    this.finishedAt = this.endedAt;
     const opponent = this.players.find(p => p.id !== player.id);
     this.winner = opponent ? opponent.username : null;
+    this.winnerId = opponent ? opponent.id : null;
     this.loser = player.username;
+    this.loserId = player.id;
     this.draw = false;
     this.reason = 'RESIGNATION';
+    this.finishReason = 'RESIGNATION';
     if (opponent) this.scores[opponent.username] = (this.scores[opponent.username] || 0) + 1;
     if (this.timerInterval) clearInterval(this.timerInterval);
     return { success: true, event: 'RESIGNED', winner: this.winner };
@@ -519,10 +548,14 @@ export class ChessGame {
     if (accept) {
       this.status = GAME_STATUS.MATCH_END;
       this.endedAt = Date.now();
+      this.finishedAt = this.endedAt;
       this.winner = null;
+      this.winnerId = null;
       this.loser = null;
+      this.loserId = null;
       this.draw = true;
       this.reason = 'DRAW_AGREEMENT';
+      this.finishReason = 'DRAW_AGREEMENT';
       for (const p of this.players) {
         this.scores[p.username] = (this.scores[p.username] || 0) + 0.5;
       }
@@ -534,12 +567,53 @@ export class ChessGame {
     }
   }
 
+  getPublicState() {
+    const currentTurnPlayer = this.players.find(p => p.color === this.currentTurn);
+
+    return {
+      gameId: this.gameId,
+      roomId: this.roomId,
+      gameType: 'chess',
+      version: this.version,
+      board: this.board,
+      currentTurn: currentTurnPlayer ? currentTurnPlayer.id : this.currentTurn,
+      currentTurnPlayerId: currentTurnPlayer ? currentTurnPlayer.id : null,
+      currentTurnColor: this.currentTurn,
+      status: this.status,
+      winner: this.winner,
+      winnerId: this.winnerId,
+      loser: this.loser,
+      loserId: this.loserId,
+      draw: this.draw,
+      reason: this.reason,
+      finishReason: this.finishReason || this.reason,
+      finishedAt: this.finishedAt || this.endedAt,
+      round: this.round,
+      scores: this.scores,
+      rules: this.rules,
+      startedAt: this.startedAt,
+      endedAt: this.endedAt,
+      inCheck: this.inCheck,
+      drawOfferedBy: this.drawOfferedBy,
+      players: this.players.map(p => ({
+        id: p.id,
+        username: p.username,
+        avatar: p.avatar,
+        color: p.color,
+        timeLeft: p.timeLeft,
+        seat: p.seat,
+        score: this.scores[p.username] || 0
+      })),
+      historyLength: this.moveHistory.length,
+      lastMove: this.moveHistory.length > 0 ? this.moveHistory[this.moveHistory.length - 1] : null
+    };
+  }
+
   getStateForPlayer(playerId) {
     const me = this.players.find(p => p.id === playerId);
     const myColor = me ? me.color : null;
     const currentTurnPlayer = this.players.find(p => p.color === this.currentTurn);
 
-    // NOTICE: legalMoves is explicitly omitted so client NEVER shows green dots, circles, or legal move hints!
     return {
       gameId: this.gameId,
       roomId: this.roomId,
@@ -552,9 +626,13 @@ export class ChessGame {
       currentTurnColor: this.currentTurn,
       status: this.status,
       winner: this.winner,
+      winnerId: this.winnerId,
       loser: this.loser,
+      loserId: this.loserId,
       draw: this.draw,
       reason: this.reason,
+      finishReason: this.finishReason || this.reason,
+      finishedAt: this.finishedAt || this.endedAt,
       round: this.round,
       scores: this.scores,
       rules: this.rules,

@@ -32,15 +32,20 @@ export class UnoGame {
     this.hasDrawnThisTurn = false;
     this.status = GAME_STATUS.PLAYING;
     this.winner = null;
+    this.winnerId = null;
     this.loser = null;
+    this.loserId = null;
     this.draw = false;
     this.reason = null;
+    this.finishReason = null;
     this.roundNumber = 1;
     this.roundWinner = null;
+    this.roundWinnerId = null;
     this.roundPointsAwarded = 0;
     this.scores = {};
     this.startedAt = Date.now();
     this.endedAt = null;
+    this.finishedAt = null;
     this.turnTimer = null;
     this.turnDeadline = 0;
     this.version = 1;
@@ -64,6 +69,14 @@ export class UnoGame {
       pendingDraw: this.pendingDraw,
       status: this.status,
       winner: this.winner,
+      winnerId: this.winnerId,
+      loser: this.loser,
+      loserId: this.loserId,
+      draw: this.draw,
+      reason: this.reason,
+      finishReason: this.finishReason,
+      endedAt: this.endedAt,
+      finishedAt: this.finishedAt,
       scores: { ...this.scores },
       version: this.version
     };
@@ -83,6 +96,14 @@ export class UnoGame {
     this.pendingDraw = snap.pendingDraw;
     this.status = snap.status;
     this.winner = snap.winner;
+    this.winnerId = snap.winnerId;
+    this.loser = snap.loser;
+    this.loserId = snap.loserId;
+    this.draw = snap.draw;
+    this.reason = snap.reason;
+    this.finishReason = snap.finishReason;
+    this.endedAt = snap.endedAt;
+    this.finishedAt = snap.finishedAt;
     this.scores = { ...snap.scores };
     this.version = snap.version;
   }
@@ -569,19 +590,28 @@ export class UnoGame {
 
     const target = this.rules.targetScore || 500;
     this.roundWinner = winner.username;
+    this.roundWinnerId = winner.id;
     this.roundPointsAwarded = roundPoints;
 
-    if (this.rules.singleRound === true || this.scores[winner.id] >= target) {
+    const isMatchWin = (this.rules.singleRound !== false) || (this.scores[winner.id] >= target);
+
+    if (isMatchWin) {
       this.status = GAME_STATUS.MATCH_END;
       this.winner = winner.username;
+      this.winnerId = winner.id;
       const otherPlayers = this.players.filter(p => p.id !== winner.id);
       otherPlayers.sort((a, b) => (this.scores[a.id] || 0) - (this.scores[b.id] || 0));
       this.loser = otherPlayers[0] ? otherPlayers[0].username : null;
+      this.loserId = otherPlayers[0] ? otherPlayers[0].id : null;
       this.draw = false;
-      this.reason = 'POINTS_TARGET';
+      this.reason = (this.scores[winner.id] >= target) ? 'POINTS_TARGET' : 'ALL_CARDS_PLAYED';
+      this.finishReason = this.reason;
       this.endedAt = Date.now();
+      this.finishedAt = this.endedAt;
     } else {
       this.status = GAME_STATUS.ROUND_END;
+      this.reason = 'ROUND_WON';
+      this.finishReason = 'ROUND_WON';
     }
   }
 
@@ -589,8 +619,62 @@ export class UnoGame {
     this.roundNumber++;
     this.status = GAME_STATUS.PLAYING;
     this.roundWinner = null;
+    this.roundWinnerId = null;
     this.roundPointsAwarded = 0;
     this.startRound();
+  }
+
+  getPublicState() {
+    const topCard = this.getTopDiscard();
+    const current = this.getCurrentPlayer();
+
+    return {
+      gameId: this.gameId,
+      roomId: this.roomId,
+      gameType: 'uno',
+      version: this.version,
+      status: this.status,
+      round: this.roundNumber,
+      roundNumber: this.roundNumber,
+      winner: this.winner,
+      winnerId: this.winnerId,
+      loser: this.loser,
+      loserId: this.loserId,
+      draw: this.draw,
+      reason: this.reason,
+      finishReason: this.finishReason || this.reason,
+      finishedAt: this.finishedAt || this.endedAt,
+      roundWinner: this.roundWinner,
+      roundWinnerId: this.roundWinnerId,
+      roundPointsAwarded: this.roundPointsAwarded,
+      startedAt: this.startedAt,
+      endedAt: this.endedAt,
+      scores: this.scores,
+      rules: this.rules,
+      currentColor: this.currentColor,
+      currentTurn: current ? current.id : null,
+      currentTurnPlayerId: current ? current.id : null,
+      currentTurnIndex: this.currentTurnIndex,
+      direction: this.direction,
+      pendingDraw: this.pendingDraw,
+      hasDrawnThisTurn: this.hasDrawnThisTurn,
+      turnDeadline: this.turnDeadline,
+      deckCount: this.deck.length,
+      topDiscard: topCard ? {
+        id: topCard.id,
+        color: topCard.color,
+        value: topCard.value
+      } : null,
+      players: this.players.map(p => ({
+        id: p.id,
+        username: p.username,
+        avatar: p.avatar,
+        seat: p.seat,
+        cardCount: p.hand.length,
+        hasCalledUno: p.hasCalledUno,
+        score: this.scores[p.id] || 0
+      }))
+    };
   }
 
   getStateForPlayer(playerId) {
@@ -608,10 +692,15 @@ export class UnoGame {
       round: this.roundNumber,
       roundNumber: this.roundNumber,
       winner: this.winner,
+      winnerId: this.winnerId,
       loser: this.loser,
+      loserId: this.loserId,
       draw: this.draw,
       reason: this.reason,
+      finishReason: this.finishReason || this.reason,
+      finishedAt: this.finishedAt || this.endedAt,
       roundWinner: this.roundWinner,
+      roundWinnerId: this.roundWinnerId,
       roundPointsAwarded: this.roundPointsAwarded,
       startedAt: this.startedAt,
       endedAt: this.endedAt,
@@ -659,10 +748,14 @@ export class UnoGame {
       if (this.players.length < 2) {
         this.status = GAME_STATUS.MATCH_END;
         this.winner = this.players[0] ? this.players[0].username : 'None';
+        this.winnerId = this.players[0] ? this.players[0].id : null;
         this.loser = leavingPlayer ? leavingPlayer.username : null;
+        this.loserId = leavingPlayer ? leavingPlayer.id : null;
         this.draw = false;
         this.reason = 'PLAYER_LEFT';
+        this.finishReason = 'PLAYER_LEFT';
         this.endedAt = Date.now();
+        this.finishedAt = this.endedAt;
       } else {
         this.currentTurnIndex = this.currentTurnIndex % this.players.length;
       }

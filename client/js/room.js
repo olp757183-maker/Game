@@ -112,6 +112,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   socket.on(SOCKET_EVENTS.GAME_STATE, (gameData) => {
     if (!gameData) return;
+    if (gameData.version !== undefined && latestGameVersion > 0 && gameData.version < latestGameVersion) {
+      return;
+    }
+    // Skip duplicate full re-render if ROOM_STATE already processed this exact version
+    if (gameData.version !== undefined && latestGameVersion === gameData.version && currentGameData && currentGameData.version === gameData.version) {
+      return;
+    }
     const user = api.getUser() || {};
     gameData.myPlayerId = gameData.myPlayerId || user.id;
 
@@ -134,6 +141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     currentGameData = gameData;
+    if (gameData.version) latestGameVersion = gameData.version;
 
     // Instantly initialize game client if stage exists and room is playing
     const stage = document.getElementById('game-stage-container');
@@ -166,6 +174,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   socket.on('room:public-state', (data) => {
     if (data && data.room) {
+      // If client already received equal or newer personalized room state, avoid redundant re-render
+      if (data.room.version !== undefined && latestRoomVersion > 0 && data.room.version <= latestRoomVersion) {
+        return;
+      }
       // Prioritize player's own personalized game state so public channel state does not strip private cards/color
       const effectiveGame = (currentGameData && (!data.game || data.game.gameId === currentGameData.gameId))
         ? currentGameData

@@ -44,8 +44,9 @@ export class ChessGame {
     this.startedAt = Date.now();
     this.endedAt = null;
     this.finishedAt = null;
-    this.lastMoveTimestamp = Date.now();
-    this.timerInterval = null;
+    this.turnStartedAt = Date.now();
+    this.turnNumber = 1;
+    this.turnTimeout = null;
     this.version = 1;
   }
 
@@ -72,6 +73,8 @@ export class ChessGame {
       finishedAt: this.finishedAt,
       scores: { ...this.scores },
       players: this.players.map(p => ({ ...p })),
+      turnStartedAt: this.turnStartedAt,
+      turnNumber: this.turnNumber,
       version: this.version
     };
   }
@@ -99,6 +102,8 @@ export class ChessGame {
     this.finishedAt = snap.finishedAt;
     this.scores = { ...snap.scores };
     this.players = snap.players.map(p => ({ ...p }));
+    if (snap.turnStartedAt) this.turnStartedAt = snap.turnStartedAt;
+    if (snap.turnNumber) this.turnNumber = snap.turnNumber;
     this.version = snap.version;
   }
 
@@ -125,37 +130,61 @@ export class ChessGame {
 
   startClock() {
     if ((this.rules.timeControl || 0) <= 0) return;
+    this.turnStartedAt = Date.now();
+    this.scheduleTurnTimeout();
+  }
 
-    if (this.timerInterval) clearInterval(this.timerInterval);
-    this.lastMoveTimestamp = Date.now();
+  scheduleTurnTimeout() {
+    this.clearTurnTimeout();
+    if (this.status !== GAME_STATUS.PLAYING) return;
+    if ((this.rules.timeControl || 0) <= 0) return;
 
-    this.timerInterval = setInterval(() => {
-      if (this.status !== GAME_STATUS.PLAYING) {
-        clearInterval(this.timerInterval);
-        return;
-      }
+    const activePlayer = this.players.find(p => p.color === this.currentTurn);
+    if (!activePlayer || activePlayer.timeLeft <= 0) return;
 
-      const activePlayer = this.players.find(p => p.color === this.currentTurn);
-      if (activePlayer) {
-        activePlayer.timeLeft -= 1;
-        if (activePlayer.timeLeft <= 0) {
-          activePlayer.timeLeft = 0;
-          this.status = GAME_STATUS.MATCH_END;
-          this.endedAt = Date.now();
-          this.finishedAt = this.endedAt;
-          const opponent = this.players.find(p => p.color !== this.currentTurn);
-          this.winner = opponent ? opponent.username : null;
-          this.winnerId = opponent ? opponent.id : null;
-          this.loser = activePlayer.username;
-          this.loserId = activePlayer.id;
-          this.draw = false;
-          this.reason = 'TIMEOUT';
-          this.finishReason = 'TIMEOUT';
-          if (opponent) this.scores[opponent.username] = (this.scores[opponent.username] || 0) + 1;
-          clearInterval(this.timerInterval);
-        }
-      }
-    }, 1000);
+    const expectedTurnNumber = this.turnNumber;
+    const expectedColor = this.currentTurn;
+    const remainingMs = Math.max(0, activePlayer.timeLeft * 1000);
+    this.turnDeadline = this.turnStartedAt + remainingMs;
+
+    this.turnTimeout = setTimeout(() => {
+      this.handleClockTimeout(expectedTurnNumber, expectedColor);
+    }, remainingMs);
+  }
+
+  handleClockTimeout(expectedTurnNumber, expectedColor) {
+    if (this.status !== GAME_STATUS.PLAYING) return;
+    if (this.turnNumber !== expectedTurnNumber || this.currentTurn !== expectedColor) return;
+
+    const activePlayer = this.players.find(p => p.color === this.currentTurn);
+    if (!activePlayer) return;
+
+    activePlayer.timeLeft = 0;
+    this.status = GAME_STATUS.MATCH_END;
+    this.endedAt = Date.now();
+    this.finishedAt = this.endedAt;
+    const opponent = this.players.find(p => p.color !== this.currentTurn);
+    this.winner = opponent ? opponent.username : null;
+    this.winnerId = opponent ? opponent.id : null;
+    this.loser = activePlayer.username;
+    this.loserId = activePlayer.id;
+    this.draw = false;
+    this.reason = 'TIMEOUT';
+    this.finishReason = 'TIMEOUT';
+    if (opponent) this.scores[opponent.username] = (this.scores[opponent.username] || 0) + 1;
+    this.clearTurnTimeout();
+
+    if (this.room && typeof this.room.notifyStateChanged === 'function') {
+      this.room.notifyStateChanged();
+    }
+  }
+
+  clearTurnTimeout() {
+    this.turnDeadline = 0;
+    if (this.turnTimeout) {
+      clearTimeout(this.turnTimeout);
+      this.turnTimeout = null;
+    }
   }
 
   isInsideBoard(r, c) {
@@ -459,9 +488,17 @@ export class ChessGame {
       this.enPassantTarget = null;
     }
 
+    // Deduct elapsed thinking time authoritatively
+    const now = Date.now();
+    const elapsedSec = Math.max(0, (now - this.turnStartedAt) / 1000);
+    player.timeLeft = Math.max(0, player.timeLeft - elapsedSec);
+
     // Add increment to player's clock
     const inc = this.rules.increment || 0;
     player.timeLeft += inc;
+
+    this.turnStartedAt = now;
+    this.turnNumber++;
 
     // Switch turn
     const nextColor = this.currentTurn === 'w' ? 'b' : 'w';
@@ -509,7 +546,9 @@ export class ChessGame {
           this.scores[p.username] = (this.scores[p.username] || 0) + 0.5;
         }
       }
-      if (this.timerInterval) clearInterval(this.timerInterval);
+      this.clearTurnTimeout();
+    } else {
+      this.scheduleTurnTimeout();
     }
 
     return { success: true, event: 'MOVE_EXECUTED', inCheck: this.inCheck, status: this.status };
@@ -528,7 +567,7 @@ export class ChessGame {
     this.reason = 'RESIGNATION';
     this.finishReason = 'RESIGNATION';
     if (opponent) this.scores[opponent.username] = (this.scores[opponent.username] || 0) + 1;
-    if (this.timerInterval) clearInterval(this.timerInterval);
+    this.clearTurnTimeout();
     return { success: true, event: 'RESIGNED', winner: this.winner };
   }
 
@@ -559,7 +598,7 @@ export class ChessGame {
       for (const p of this.players) {
         this.scores[p.username] = (this.scores[p.username] || 0) + 0.5;
       }
-      if (this.timerInterval) clearInterval(this.timerInterval);
+      this.clearTurnTimeout();
       return { success: true, event: 'DRAW_ACCEPTED' };
     } else {
       this.drawOfferedBy = null;
@@ -569,6 +608,11 @@ export class ChessGame {
 
   getPublicState() {
     const currentTurnPlayer = this.players.find(p => p.color === this.currentTurn);
+    const currentElapsed = (this.status === GAME_STATUS.PLAYING && currentTurnPlayer) ? Math.max(0, (Date.now() - this.turnStartedAt) / 1000) : 0;
+    const activeRemaining = currentTurnPlayer ? Math.max(0, currentTurnPlayer.timeLeft - currentElapsed) : 0;
+    const turnDeadline = (this.status === GAME_STATUS.PLAYING && currentTurnPlayer && (this.rules.timeControl || 0) > 0)
+      ? (this.turnStartedAt + Math.round(activeRemaining * 1000))
+      : 0;
 
     return {
       gameId: this.gameId,
@@ -579,6 +623,10 @@ export class ChessGame {
       currentTurn: currentTurnPlayer ? currentTurnPlayer.id : this.currentTurn,
       currentTurnPlayerId: currentTurnPlayer ? currentTurnPlayer.id : null,
       currentTurnColor: this.currentTurn,
+      serverTime: Date.now(),
+      turnStartedAt: this.turnStartedAt,
+      turnDeadline,
+      turnNumber: this.turnNumber,
       status: this.status,
       winner: this.winner,
       winnerId: this.winnerId,
@@ -595,15 +643,19 @@ export class ChessGame {
       endedAt: this.endedAt,
       inCheck: this.inCheck,
       drawOfferedBy: this.drawOfferedBy,
-      players: this.players.map(p => ({
-        id: p.id,
-        username: p.username,
-        avatar: p.avatar,
-        color: p.color,
-        timeLeft: p.timeLeft,
-        seat: p.seat,
-        score: this.scores[p.username] || 0
-      })),
+      players: this.players.map(p => {
+        const isCurrent = (this.status === GAME_STATUS.PLAYING && p.color === this.currentTurn);
+        const pTime = isCurrent ? Math.max(0, p.timeLeft - currentElapsed) : p.timeLeft;
+        return {
+          id: p.id,
+          username: p.username,
+          avatar: p.avatar,
+          color: p.color,
+          timeLeft: Math.round(pTime),
+          seat: p.seat,
+          score: this.scores[p.username] || 0
+        };
+      }),
       historyLength: this.moveHistory.length,
       lastMove: this.moveHistory.length > 0 ? this.moveHistory[this.moveHistory.length - 1] : null
     };
@@ -613,6 +665,11 @@ export class ChessGame {
     const me = this.players.find(p => p.id === playerId);
     const myColor = me ? me.color : null;
     const currentTurnPlayer = this.players.find(p => p.color === this.currentTurn);
+    const currentElapsed = (this.status === GAME_STATUS.PLAYING && currentTurnPlayer) ? Math.max(0, (Date.now() - this.turnStartedAt) / 1000) : 0;
+    const activeRemaining = currentTurnPlayer ? Math.max(0, currentTurnPlayer.timeLeft - currentElapsed) : 0;
+    const turnDeadline = (this.status === GAME_STATUS.PLAYING && currentTurnPlayer && (this.rules.timeControl || 0) > 0)
+      ? (this.turnStartedAt + Math.round(activeRemaining * 1000))
+      : 0;
 
     return {
       gameId: this.gameId,
@@ -624,6 +681,10 @@ export class ChessGame {
       currentTurn: currentTurnPlayer ? currentTurnPlayer.id : this.currentTurn,
       currentTurnPlayerId: currentTurnPlayer ? currentTurnPlayer.id : null,
       currentTurnColor: this.currentTurn,
+      serverTime: Date.now(),
+      turnStartedAt: this.turnStartedAt,
+      turnDeadline,
+      turnNumber: this.turnNumber,
       status: this.status,
       winner: this.winner,
       winnerId: this.winnerId,
@@ -641,15 +702,19 @@ export class ChessGame {
       inCheck: this.inCheck,
       drawOfferedBy: this.drawOfferedBy,
       myColor: myColor || 'spectator',
-      players: this.players.map(p => ({
-        id: p.id,
-        username: p.username,
-        avatar: p.avatar,
-        color: p.color,
-        timeLeft: p.timeLeft,
-        seat: p.seat,
-        score: this.scores[p.username] || 0
-      })),
+      players: this.players.map(p => {
+        const isCurrent = (this.status === GAME_STATUS.PLAYING && p.color === this.currentTurn);
+        const pTime = isCurrent ? Math.max(0, p.timeLeft - currentElapsed) : p.timeLeft;
+        return {
+          id: p.id,
+          username: p.username,
+          avatar: p.avatar,
+          color: p.color,
+          timeLeft: Math.round(pTime),
+          seat: p.seat,
+          score: this.scores[p.username] || 0
+        };
+      }),
       historyLength: this.moveHistory.length,
       lastMove: this.moveHistory.length > 0 ? this.moveHistory[this.moveHistory.length - 1] : null
     };

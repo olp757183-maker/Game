@@ -13,6 +13,11 @@ export const activeRooms = new Map();
 // Code lookup: code -> roomId
 export const codeToRoomId = new Map();
 
+let roomBroadcaster = null;
+export function setRoomBroadcaster(fn) {
+  roomBroadcaster = fn;
+}
+
 export class Room {
   constructor({ id, code, hostUser, gameType, maxPlayers, privacy = ROOM_PRIVACY.PUBLIC, rules = {} }) {
     this.id = id || crypto.randomUUID();
@@ -335,6 +340,17 @@ export class Room {
     };
   }
 
+  notifyStateChanged() {
+    this.version++;
+    if (this.gameInstance && typeof this.gameInstance.version === 'number') {
+      this.gameInstance.version++;
+    }
+    this.lastActiveAt = Date.now();
+    if (typeof roomBroadcaster === 'function') {
+      roomBroadcaster(this);
+    }
+  }
+
   // Get full room state + player's secret state
   getStateForPlayer(userId) {
     const publicRoom = this.getPublicRoomInfo();
@@ -350,7 +366,8 @@ export class Room {
       myPlayerId: userId,
       isHost: (this.hostId === userId),
       version: this.version,
-      gameStateVersion: this.gameInstance ? (this.gameInstance.version || 1) : 0
+      gameStateVersion: this.gameInstance ? (this.gameInstance.version || 1) : 0,
+      serverTime: Date.now()
     };
   }
 }

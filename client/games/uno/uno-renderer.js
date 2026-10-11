@@ -103,6 +103,10 @@ export function renderUNO(state, options = {}) {
           ${isMyTurn ? `🟢 ${i18n.t('yourTurn')}` : `🕒 ${i18n.t('waitingTurn')}`}
         </div>
 
+        <div class="turn-timer-pill" id="uno-turn-timer">
+          ⏱ <span id="uno-turn-timer-val">--</span>s
+        </div>
+
         ${state.pendingDraw > 0 ? `
           <div class="penalty-pill">
             ⚠️ +${state.pendingDraw} Penalty Stack!

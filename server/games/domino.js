@@ -39,6 +39,10 @@ export class DominoGame {
     this.startedAt = Date.now();
     this.endedAt = null;
     this.finishedAt = null;
+    this.turnStartedAt = Date.now();
+    this.turnNumber = 1;
+    this.turnTimer = null;
+    this.turnDeadline = 0;
     this.version = 1;
 
     this.players.forEach(p => {
@@ -69,6 +73,9 @@ export class DominoGame {
       endedAt: this.endedAt,
       finishedAt: this.finishedAt,
       scores: { ...this.scores },
+      turnStartedAt: this.turnStartedAt,
+      turnDeadline: this.turnDeadline,
+      turnNumber: this.turnNumber,
       version: this.version
     };
   }
@@ -96,6 +103,9 @@ export class DominoGame {
     this.endedAt = snap.endedAt;
     this.finishedAt = snap.finishedAt;
     this.scores = { ...snap.scores };
+    if (snap.turnStartedAt) this.turnStartedAt = snap.turnStartedAt;
+    if (snap.turnDeadline) this.turnDeadline = snap.turnDeadline;
+    if (snap.turnNumber) this.turnNumber = snap.turnNumber;
     this.version = snap.version;
   }
 
@@ -164,6 +174,7 @@ export class DominoGame {
     });
 
     this.currentTurnIndex = startIdx;
+    this.resetTurnTimer();
   }
 
   startNextRound() {
@@ -178,6 +189,82 @@ export class DominoGame {
 
   advanceTurn() {
     this.currentTurnIndex = (this.currentTurnIndex + 1) % this.players.length;
+    this.turnNumber++;
+    this.resetTurnTimer();
+  }
+
+  resetTurnTimer() {
+    if (this.turnTimer) {
+      clearTimeout(this.turnTimer);
+      this.turnTimer = null;
+    }
+    const seconds = this.rules.turnTimer || 0;
+    this.turnStartedAt = Date.now();
+    if (seconds > 0 && this.status === GAME_STATUS.PLAYING) {
+      this.turnDeadline = this.turnStartedAt + seconds * 1000;
+      const expectedTurnNumber = this.turnNumber;
+      const expectedTurnIndex = this.currentTurnIndex;
+      this.turnTimer = setTimeout(() => {
+        this.handleTurnTimeout(expectedTurnNumber, expectedTurnIndex);
+      }, seconds * 1000);
+    } else {
+      this.turnDeadline = 0;
+    }
+  }
+
+  handleTurnTimeout(expectedTurnNumber, expectedTurnIndex) {
+    if (this.status !== GAME_STATUS.PLAYING) return;
+    if (expectedTurnNumber !== undefined && (this.turnNumber !== expectedTurnNumber || this.currentTurnIndex !== expectedTurnIndex)) {
+      return;
+    }
+    const current = this.getCurrentPlayer();
+    if (!current) return;
+
+    // Timeout fallback: if player has a playable tile, auto-play first playable tile
+    if (this.canPlayAnyTile(current)) {
+      const tile = current.hand.find(t =>
+        this.board.length === 0 ||
+        t.left === this.leftEnd || t.right === this.leftEnd ||
+        t.left === this.rightEnd || t.right === this.rightEnd
+      );
+      if (tile) {
+        try {
+          this.executePlay(current, tile.id);
+          if (this.room && typeof this.room.notifyStateChanged === 'function') {
+            this.room.notifyStateChanged();
+          }
+          return;
+        } catch (e) {}
+      }
+    } else if (this.boneyard.length > 0 && this.rules.drawRule !== 'pass') {
+      try {
+        this.executeDraw(current);
+        if (this.room && typeof this.room.notifyStateChanged === 'function') {
+          this.room.notifyStateChanged();
+        }
+        return;
+      } catch (e) {}
+    } else {
+      try {
+        this.executePass(current);
+        if (this.room && typeof this.room.notifyStateChanged === 'function') {
+          this.room.notifyStateChanged();
+        }
+        return;
+      } catch (e) {}
+    }
+
+    this.advanceTurn();
+    if (this.room && typeof this.room.notifyStateChanged === 'function') {
+      this.room.notifyStateChanged();
+    }
+  }
+
+  clearTurnTimer() {
+    if (this.turnTimer) {
+      clearTimeout(this.turnTimer);
+      this.turnTimer = null;
+    }
   }
 
   canPlayAnyTile(player) {
@@ -352,6 +439,7 @@ export class DominoGame {
   }
 
   handleDominoWin(winner, isBlocked = false) {
+    this.clearTurnTimer();
     let pipSum = 0;
     this.players.forEach(p => {
       if (p.id !== winner.id) {
@@ -388,6 +476,7 @@ export class DominoGame {
   }
 
   handleBlockedGame() {
+    this.clearTurnTimer();
     // Round ends locked: player with lowest pip sum wins
     let lowestSum = Infinity;
     let winningPlayer = null;
@@ -459,6 +548,11 @@ export class DominoGame {
       currentTurn: current ? current.id : null,
       currentTurnPlayerId: current ? current.id : null,
       currentTurnIndex: this.currentTurnIndex,
+      serverTime: Date.now(),
+      turnStartedAt: this.turnStartedAt,
+      turnDeadline: this.turnDeadline,
+      turnDuration: (this.rules.turnTimer || 0) * 1000,
+      turnNumber: this.turnNumber,
       board: this.board,
       leftEnd: this.leftEnd,
       rightEnd: this.rightEnd,
@@ -505,6 +599,11 @@ export class DominoGame {
       currentTurn: current ? current.id : null,
       currentTurnPlayerId: current ? current.id : null,
       currentTurnIndex: this.currentTurnIndex,
+      serverTime: Date.now(),
+      turnStartedAt: this.turnStartedAt,
+      turnDeadline: this.turnDeadline,
+      turnDuration: (this.rules.turnTimer || 0) * 1000,
+      turnNumber: this.turnNumber,
       board: this.board,
       leftEnd: this.leftEnd,
       rightEnd: this.rightEnd,

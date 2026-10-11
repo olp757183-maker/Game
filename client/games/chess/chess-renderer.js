@@ -102,7 +102,7 @@ export function renderChess(state, options = {}) {
             <span class="player-color-tag">(${topPlayer.color === 'w' ? 'White / أبيض' : 'Black / أسود'})</span>
           </div>
         </div>
-        <div class="chess-timer-badge">
+        <div class="chess-timer-badge" id="chess-timer-top" data-color="${topPlayer.color}">
           ⏱ ${formatTime(topPlayer.timeLeft || 0)}
         </div>
       </div>
@@ -125,7 +125,7 @@ export function renderChess(state, options = {}) {
             <span class="player-color-tag">(${bottomPlayer.color === 'w' ? 'White / أبيض' : 'Black / أسود'})</span>
           </div>
         </div>
-        <div class="chess-timer-badge">
+        <div class="chess-timer-badge" id="chess-timer-bottom" data-color="${bottomPlayer.color}">
           ⏱ ${formatTime(bottomPlayer.timeLeft || 0)}
         </div>
       </div>

@@ -101,6 +101,10 @@ export function renderDomino(state, options = {}) {
         <div class="game-status-badge ${isMyTurn ? 'my-turn' : ''}">
           ${isMyTurn ? `🟢 ${i18n.t('yourTurn')}` : `🕒 ${i18n.t('waitingTurn')}`}
         </div>
+
+        <div class="turn-timer-pill" id="domino-turn-timer">
+          ⏱ <span id="domino-turn-timer-val">--</span>s
+        </div>
       </div>
 
       <!-- Opponents Area -->

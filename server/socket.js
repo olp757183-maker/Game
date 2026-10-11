@@ -6,7 +6,7 @@
 import { Server } from 'socket.io';
 import auth from './auth.js';
 import users from './users.js';
-import rooms, { activeRooms } from './rooms.js';
+import rooms, { activeRooms, setRoomBroadcaster } from './rooms.js';
 import database from './database.js';
 import { SOCKET_EVENTS, ROOM_STATUS, ERROR_CODES, GameActionError } from '../shared/constants.js';
 import { sanitizeChatMessage } from '../shared/validation.js';
@@ -72,10 +72,13 @@ export function broadcastRoomState(room) {
   // Also broadcast public room state to the room channel
   const publicState = {
     room: room.getPublicRoomInfo(),
-    game: room.gameInstance ? (typeof room.gameInstance.getPublicState === 'function' ? room.gameInstance.getPublicState() : null) : null
+    game: room.gameInstance ? (typeof room.gameInstance.getPublicState === 'function' ? room.gameInstance.getPublicState() : null) : null,
+    serverTime: Date.now()
   };
   ioInstance.to(channel).emit('room:public-state', publicState);
 }
+
+setRoomBroadcaster(broadcastRoomState);
 
 /**
  * Broadcast lobby notifications
@@ -559,37 +562,43 @@ export function setupSocketServer(httpServer) {
           const game = room.gameInstance;
           if (game.status === 'GAME_OVER' || game.status === 'MATCH_END' || game.status === 'FINISHED') {
             room.status = ROOM_STATUS.FINISHED;
-            database.updateRoomStatus(room.id, ROOM_STATUS.FINISHED);
 
-            try {
-              database.recordMatchResult({
-                gameId: game.gameId || `g_${Date.now()}`,
-                roomId: room.id,
-                gameType: room.gameType,
-                players: room.players.map(p => ({ id: p.id, username: p.username })),
-                winner: game.winner,
-                loser: game.loser,
-                draw: Boolean(game.draw),
-                reason: game.reason || 'NORMAL_FINISH',
-                scores: game.scores || {},
-                startedAt: game.startedAt || Date.now(),
-                endedAt: game.endedAt || Date.now()
-              });
-
-              const winnerName = game.winner;
-              for (const p of room.players) {
-                const won = (p.username === winnerName);
-                const pScore = (game.scores && (game.scores[p.id] || game.scores[p.username])) || 0;
-                database.recordGameStat(p.id, room.gameType, won, pScore);
-              }
-            } catch (dbErr) {
-              console.error('Failed to record match stats:', dbErr);
-            }
+            // Broadcast winning/end state to ALL players immediately with zero disk delay
+            broadcastRoomState(room);
             broadcastLobbyRoomUpdated(room);
-          }
 
-          // Broadcast valid new state to ALL players in room
-          broadcastRoomState(room);
+            // Offload database persistence off the hot real-time network path
+            setImmediate(() => {
+              try {
+                database.updateRoomStatus(room.id, ROOM_STATUS.FINISHED);
+                database.recordMatchResult({
+                  gameId: game.gameId || `g_${Date.now()}`,
+                  roomId: room.id,
+                  gameType: room.gameType,
+                  players: room.players.map(p => ({ id: p.id, username: p.username })),
+                  winner: game.winner,
+                  loser: game.loser,
+                  draw: Boolean(game.draw),
+                  reason: game.reason || 'NORMAL_FINISH',
+                  scores: game.scores || {},
+                  startedAt: game.startedAt || Date.now(),
+                  endedAt: game.endedAt || Date.now()
+                });
+
+                const winnerName = game.winner;
+                for (const p of room.players) {
+                  const won = (p.username === winnerName);
+                  const pScore = (game.scores && (game.scores[p.id] || game.scores[p.username])) || 0;
+                  database.recordGameStat(p.id, room.gameType, won, pScore);
+                }
+              } catch (dbErr) {
+                console.error('Failed to record match stats in background:', dbErr);
+              }
+            });
+          } else {
+            // Broadcast valid new state to ALL players in room immediately
+            broadcastRoomState(room);
+          }
 
         } catch (actionErr) {
           // ATOMIC ROLLBACK: Restore state snapshot so game state is pristine!

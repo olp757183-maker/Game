@@ -605,6 +605,39 @@
   color: var(--accent);
 }
 
+.chess-timer-badge.timer-urgent {
+  color: #ef4444;
+  animation: pulse-urgent 1s infinite alternate;
+}
+
+.turn-timer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-full);
+  font-family: monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s ease;
+}
+
+.turn-timer-pill.timer-urgent {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #ef4444;
+  animation: pulse-urgent 1s infinite alternate;
+}
+
+@keyframes pulse-urgent {
+  from { transform: scale(1); box-shadow: 0 0 4px rgba(239, 68, 68, 0.3); }
+  to { transform: scale(1.05); box-shadow: 0 0 12px rgba(239, 68, 68, 0.8); }
+}
+
 .chess-grid-wrapper {
   background: #1e293b;
   padding: 10px;

@@ -6,6 +6,7 @@
 import socket from '../../js/socket.js';
 import { sfx, showToast } from '../../js/utils.js';
 import { renderUNO } from './uno-renderer.js';
+import GameTimer from '../../js/timer.js';
 
 export class UnoClient {
   constructor(containerElement, roomId) {
@@ -16,6 +17,24 @@ export class UnoClient {
     this.selectedWildCardId = null;
     this.actionInFlight = false;
     this.actionTimeout = null;
+
+    this.gameTimer = new GameTimer({
+      onTick: ({ remainingSec }) => {
+        this.updateTimerPill(remainingSec);
+      }
+    });
+  }
+
+  updateTimerPill(remainingSec) {
+    const pill = this.container.querySelector('#uno-turn-timer');
+    const val = this.container.querySelector('#uno-turn-timer-val');
+    if (!pill || !val) return;
+    val.textContent = remainingSec;
+    if (remainingSec <= 5 && remainingSec > 0) {
+      pill.classList.add('timer-urgent');
+    } else {
+      pill.classList.remove('timer-urgent');
+    }
   }
 
   handleActionError(err) {
@@ -48,6 +67,24 @@ export class UnoClient {
     }
 
     this.render();
+
+    // Start / synchronize authoritative turn timer
+    if (this.state.status === 'PLAYING' && this.state.turnDeadline > 0) {
+      this.gameTimer.start({
+        serverTime: this.state.serverTime,
+        turnDeadline: this.state.turnDeadline,
+        turnDuration: this.state.turnDuration,
+        turnNumber: this.state.turnNumber
+      });
+    } else {
+      this.gameTimer.stop();
+    }
+  }
+
+  destroy() {
+    if (this.gameTimer) {
+      this.gameTimer.destroy();
+    }
   }
 
   render() {

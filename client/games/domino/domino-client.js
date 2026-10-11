@@ -6,6 +6,7 @@
 import socket from '../../js/socket.js';
 import { sfx } from '../../js/utils.js';
 import { renderDomino } from './domino-renderer.js';
+import GameTimer from '../../js/timer.js';
 
 export class DominoClient {
   constructor(containerElement, roomId) {
@@ -16,6 +17,24 @@ export class DominoClient {
     this.selectedTileId = null;
     this.actionInFlight = false;
     this.actionTimeout = null;
+
+    this.gameTimer = new GameTimer({
+      onTick: ({ remainingSec }) => {
+        this.updateTimerPill(remainingSec);
+      }
+    });
+  }
+
+  updateTimerPill(remainingSec) {
+    const pill = this.container.querySelector('#domino-turn-timer');
+    const val = this.container.querySelector('#domino-turn-timer-val');
+    if (!pill || !val) return;
+    val.textContent = remainingSec;
+    if (remainingSec <= 5 && remainingSec > 0) {
+      pill.classList.add('timer-urgent');
+    } else {
+      pill.classList.remove('timer-urgent');
+    }
   }
 
   handleActionError(err) {
@@ -51,6 +70,24 @@ export class DominoClient {
     }
 
     this.render();
+
+    // Start / synchronize authoritative turn timer
+    if (this.state.status === 'PLAYING' && this.state.turnDeadline > 0) {
+      this.gameTimer.start({
+        serverTime: this.state.serverTime,
+        turnDeadline: this.state.turnDeadline,
+        turnDuration: this.state.turnDuration,
+        turnNumber: this.state.turnNumber
+      });
+    } else {
+      this.gameTimer.stop();
+    }
+  }
+
+  destroy() {
+    if (this.gameTimer) {
+      this.gameTimer.destroy();
+    }
   }
 
   render() {

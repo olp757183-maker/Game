@@ -48,6 +48,8 @@ export class UnoGame {
     this.finishedAt = null;
     this.turnTimer = null;
     this.turnDeadline = 0;
+    this.turnStartedAt = Date.now();
+    this.turnNumber = 1;
     this.version = 1;
 
     this.players.forEach(p => {
@@ -78,6 +80,9 @@ export class UnoGame {
       endedAt: this.endedAt,
       finishedAt: this.finishedAt,
       scores: { ...this.scores },
+      turnStartedAt: this.turnStartedAt,
+      turnDeadline: this.turnDeadline,
+      turnNumber: this.turnNumber,
       version: this.version
     };
   }
@@ -105,6 +110,9 @@ export class UnoGame {
     this.endedAt = snap.endedAt;
     this.finishedAt = snap.finishedAt;
     this.scores = { ...snap.scores };
+    if (snap.turnStartedAt) this.turnStartedAt = snap.turnStartedAt;
+    if (snap.turnDeadline) this.turnDeadline = snap.turnDeadline;
+    if (snap.turnNumber) this.turnNumber = snap.turnNumber;
     this.version = snap.version;
   }
 
@@ -213,31 +221,48 @@ export class UnoGame {
     const total = this.players.length;
     this.currentTurnIndex = (this.currentTurnIndex + (this.direction * steps) % total + total) % total;
     this.hasDrawnThisTurn = false;
+    this.turnNumber++;
     this.resetTurnTimer();
   }
 
   resetTurnTimer() {
-    if (this.turnTimer) clearTimeout(this.turnTimer);
+    if (this.turnTimer) {
+      clearTimeout(this.turnTimer);
+      this.turnTimer = null;
+    }
     const seconds = this.rules.turnTimer || 0;
+    this.turnStartedAt = Date.now();
     if (seconds > 0 && this.status === GAME_STATUS.PLAYING) {
-      this.turnDeadline = Date.now() + seconds * 1000;
+      this.turnDeadline = this.turnStartedAt + seconds * 1000;
+      const expectedTurnNumber = this.turnNumber;
+      const expectedTurnIndex = this.currentTurnIndex;
       this.turnTimer = setTimeout(() => {
-        this.handleTurnTimeout();
+        this.handleTurnTimeout(expectedTurnNumber, expectedTurnIndex);
       }, seconds * 1000);
     } else {
       this.turnDeadline = 0;
     }
   }
 
-  handleTurnTimeout() {
+  handleTurnTimeout(expectedTurnNumber, expectedTurnIndex) {
     if (this.status !== GAME_STATUS.PLAYING) return;
+    if (expectedTurnNumber !== undefined && (this.turnNumber !== expectedTurnNumber || this.currentTurnIndex !== expectedTurnIndex)) {
+      return;
+    }
     const current = this.getCurrentPlayer();
     if (!current) return;
 
     // Auto-draw for timed-out player
-    this.executeDraw(current.id);
+    try {
+      this.executeDraw(current.id);
+    } catch (e) {
+      // If deck empty or draw error
+    }
     this.advanceTurn();
-    this.room.getStateForPlayer(current.id);
+
+    if (this.room && typeof this.room.notifyStateChanged === 'function') {
+      this.room.notifyStateChanged();
+    }
   }
 
   isPlayable(card) {
@@ -642,7 +667,11 @@ export class UnoGame {
       direction: this.direction,
       pendingDraw: this.pendingDraw,
       hasDrawnThisTurn: this.hasDrawnThisTurn,
+      serverTime: Date.now(),
+      turnStartedAt: this.turnStartedAt,
       turnDeadline: this.turnDeadline,
+      turnDuration: (this.rules.turnTimer || 0) * 1000,
+      turnNumber: this.turnNumber,
       deckCount: this.deck.length,
       topDiscard: topCard ? {
         id: topCard.id,
@@ -697,7 +726,11 @@ export class UnoGame {
       direction: this.direction,
       pendingDraw: this.pendingDraw,
       hasDrawnThisTurn: this.hasDrawnThisTurn,
+      serverTime: Date.now(),
+      turnStartedAt: this.turnStartedAt,
       turnDeadline: this.turnDeadline,
+      turnDuration: (this.rules.turnTimer || 0) * 1000,
+      turnNumber: this.turnNumber,
       deckCount: this.deck.length,
       topDiscard: topCard ? {
         id: topCard.id,

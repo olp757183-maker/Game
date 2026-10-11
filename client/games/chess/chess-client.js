@@ -4,8 +4,9 @@
  */
 
 import socket from '../../js/socket.js';
-import { sfx, showToast } from '../../js/utils.js';
+import { sfx, showToast, formatTime } from '../../js/utils.js';
 import { renderChess } from './chess-renderer.js';
+import GameTimer from '../../js/timer.js';
 
 export class ChessClient {
   constructor(containerElement, roomId) {
@@ -17,6 +18,36 @@ export class ChessClient {
     this.pendingPromotionMove = null;
     this.actionInFlight = false;
     this.actionTimeout = null;
+
+    this.gameTimer = new GameTimer({
+      onTick: ({ remainingSec }) => {
+        this.updateActiveTimerBadge(remainingSec);
+      }
+    });
+  }
+
+  updateActiveTimerBadge(remainingSec) {
+    if (!this.state || this.state.status !== 'PLAYING') return;
+    const turnColor = this.state.currentTurnColor ||
+      (this.state.currentTurn === 'w' || this.state.currentTurn === 'b'
+        ? this.state.currentTurn
+        : (this.state.players?.find(p => p.id === this.state.currentTurn)?.color) || 'w');
+
+    const topBadge = this.container.querySelector('#chess-timer-top');
+    const bottomBadge = this.container.querySelector('#chess-timer-bottom');
+
+    const activeBadge = (topBadge && topBadge.getAttribute('data-color') === turnColor)
+      ? topBadge
+      : (bottomBadge && bottomBadge.getAttribute('data-color') === turnColor ? bottomBadge : null);
+
+    if (activeBadge) {
+      activeBadge.textContent = `⏱ ${formatTime(remainingSec)}`;
+      if (remainingSec <= 10) {
+        activeBadge.classList.add('timer-urgent');
+      } else {
+        activeBadge.classList.remove('timer-urgent');
+      }
+    }
   }
 
   handleActionError(err) {
@@ -63,6 +94,24 @@ export class ChessClient {
     this.selectedSquare = null;
     this.legalDestinations = [];
     this.render();
+
+    // Start / synchronize authoritative countdown
+    if (this.state.status === 'PLAYING' && this.state.turnDeadline > 0) {
+      this.gameTimer.start({
+        serverTime: this.state.serverTime,
+        turnDeadline: this.state.turnDeadline,
+        turnDuration: 0,
+        turnNumber: this.state.turnNumber
+      });
+    } else {
+      this.gameTimer.stop();
+    }
+  }
+
+  destroy() {
+    if (this.gameTimer) {
+      this.gameTimer.destroy();
+    }
   }
 
   render() {

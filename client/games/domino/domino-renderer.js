@@ -5,6 +5,7 @@
 
 import { escapeHtml } from '../../js/utils.js';
 import i18n from '../../js/language.js';
+import skinAssets from '../../js/skin-assets.js';
 
 export function renderPips(num) {
   const n = parseInt(num, 10);
@@ -21,10 +22,21 @@ export function renderPips(num) {
   return `<div class="pips-grid pips-${n}">${pipLayouts[n] || ''}</div>`;
 }
 
-export function renderBoardTile(tile) {
+export function renderBoardTile(tile, options = {}) {
   if (!tile) return '';
+  const { skinId = null } = options;
   const leftVal = tile.placedLeft !== undefined ? tile.placedLeft : (tile.left !== undefined ? tile.left : 0);
   const rightVal = tile.placedRight !== undefined ? tile.placedRight : (tile.right !== undefined ? tile.right : 0);
+
+  const customImg = skinId ? skinAssets.getDominoTileAsset(skinId, tile) : null;
+  if (customImg) {
+    return `
+      <div class="domino-tile board-tile ${tile.isDouble ? 'tile-double' : ''} tile-custom" data-left="${leftVal}" data-right="${rightVal}" title="Domino [${leftVal}|${rightVal}]">
+        <img src="${customImg}" class="domino-custom-img" alt="[${leftVal}|${rightVal}]" />
+      </div>
+    `;
+  }
+
   return `
     <div class="domino-tile board-tile ${tile.isDouble ? 'tile-double' : ''}" data-left="${leftVal}" data-right="${rightVal}" title="Domino [${leftVal}|${rightVal}]">
       <div class="tile-half half-top">${renderPips(leftVal)}</div>
@@ -34,10 +46,25 @@ export function renderBoardTile(tile) {
   `;
 }
 
-export function renderHandTile(tile, isMyTurn, isSelected = false) {
+export function renderHandTile(tile, isMyTurn, isSelected = false, options = {}) {
   if (!tile) return '';
+  const { skinId = null } = options;
   const leftVal = tile.left !== undefined ? tile.left : 0;
   const rightVal = tile.right !== undefined ? tile.right : 0;
+
+  const customImg = skinId ? skinAssets.getDominoTileAsset(skinId, tile) : null;
+  if (customImg) {
+    return `
+      <div class="domino-tile hand-tile ${isSelected ? 'selected' : ''} tile-custom"
+           data-id="${tile.id || ''}"
+           data-left="${leftVal}"
+           data-right="${rightVal}"
+           title="Tile [${leftVal}|${rightVal}]">
+        <img src="${customImg}" class="domino-custom-img" alt="[${leftVal}|${rightVal}]" />
+      </div>
+    `;
+  }
+
   return `
     <div class="domino-tile hand-tile ${isSelected ? 'selected' : ''}"
          data-id="${tile.id || ''}"
@@ -137,7 +164,7 @@ export function renderDomino(state, options = {}) {
               <div class="empty-table-placeholder ${selectedTile ? 'can-drop-first' : ''}" id="domino-empty-table" title="اضغط هنا لوضع أول قطعة">
                 <span>🁢 ${selectedTile ? 'اضغط هنا لوضع أول قطعة دومينو!' : 'اختر قطعة من يدك لبدء السلسلة!'}</span>
               </div>
-            ` : state.board.map(t => renderBoardTile(t)).join('')}
+            ` : state.board.map(t => renderBoardTile(t, { skinId: mySkin })).join('')}
             ${canRight && !isBoardEmpty ? `<div class="chain-drop-zone drop-right" data-side="right" title="ضع هنا (يمين)">▶</div>` : ''}
           </div>
         </div>
@@ -158,7 +185,7 @@ export function renderDomino(state, options = {}) {
           <span>قطعك (${state.myHand?.length || 0})</span>
         </div>
         <div class="player-hand domino-hand-scroll" id="domino-hand-container">
-          ${(state.myHand || []).map(t => renderHandTile(t, isMyTurn, t.id === selectedTileId)).join('')}
+          ${(state.myHand || []).map(t => renderHandTile(t, isMyTurn, t.id === selectedTileId, { skinId: mySkin })).join('')}
         </div>
       </div>
 

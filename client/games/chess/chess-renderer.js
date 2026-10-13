@@ -5,6 +5,7 @@
 
 import { escapeHtml, formatTime } from '../../js/utils.js';
 import i18n from '../../js/language.js';
+import skinAssets from '../../js/skin-assets.js';
 
 export const PIECE_SYMBOLS = {
   w: { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' },
@@ -12,7 +13,7 @@ export const PIECE_SYMBOLS = {
 };
 
 export function renderChessSquares(state, options = {}) {
-  const { isFlipped = false, selectedSquare = null, legalDestinations = [] } = options;
+  const { isFlipped = false, selectedSquare = null, legalDestinations = [], skinId = null } = options;
   const board = state.board || [];
   let html = '';
 
@@ -31,8 +32,13 @@ export function renderChessSquares(state, options = {}) {
 
       let pieceHtml = '';
       if (piece) {
-        const sym = PIECE_SYMBOLS[piece.color]?.[piece.type] || '';
-        pieceHtml = `<span class="chess-piece piece-${piece.color}">${sym}</span>`;
+        const customPieceImg = skinId ? skinAssets.getChessPieceAsset(skinId, piece) : null;
+        if (customPieceImg) {
+          pieceHtml = `<span class="chess-piece piece-${piece.color} piece-custom"><img src="${customPieceImg}" alt="${piece.color}_${piece.type}" class="chess-piece-img" /></span>`;
+        } else {
+          const sym = PIECE_SYMBOLS[piece.color]?.[piece.type] || '';
+          pieceHtml = `<span class="chess-piece piece-${piece.color}">${sym}</span>`;
+        }
       }
 
       let indicatorHtml = '';
@@ -44,6 +50,9 @@ export function renderChessSquares(state, options = {}) {
         }
       }
 
+      const squareImg = skinId ? skinAssets.getChessSquareAsset(skinId, isDark) : null;
+      const squareStyle = squareImg ? `style="background-image: url('${squareImg}'); background-size: cover; background-position: center;"` : '';
+
       html += `
         <div class="chess-square ${isDark ? 'square-dark' : 'square-light'}
                     ${isSelected ? 'square-selected' : ''}
@@ -51,6 +60,7 @@ export function renderChessSquares(state, options = {}) {
                     ${isLegalDest ? 'square-legal-move' : ''}"
              data-row="${r}"
              data-col="${c}"
+             ${squareStyle}
              title="Square ${String.fromCharCode(97 + c)}${8 - r}${isLegalDest ? ' (حركة قانونية متاحة)' : ''}">
           ${indicatorHtml}
           ${pieceHtml}
@@ -112,7 +122,7 @@ export function renderChess(state, options = {}) {
       <div class="game-board chess-center-board">
         <div class="chess-grid-wrapper">
           <div class="chess-board ${isFlipped ? 'board-flipped' : ''}" id="chess-board-grid">
-            ${renderChessSquares(state, { isFlipped, selectedSquare, legalDestinations })}
+            ${renderChessSquares(state, { isFlipped, selectedSquare, legalDestinations, skinId: mySkin })}
           </div>
         </div>
       </div>

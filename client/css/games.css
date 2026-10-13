@@ -1220,3 +1220,52 @@
   }
 }
 
+/* ==========================================================================
+   Custom Skin Bundle Assets (UNO, Chess, Domino)
+   ========================================================================== */
+.uno-card-custom-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
+  pointer-events: none;
+  user-select: none;
+  display: block;
+}
+
+.chess-piece.piece-custom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.chess-piece-img {
+  width: 85%;
+  height: 85%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+  display: block;
+}
+
+.domino-tile.tile-custom {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.2);
+  padding: 0;
+  overflow: hidden;
+}
+
+.domino-custom-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
+  pointer-events: none;
+  user-select: none;
+  display: block;
+}
+
+

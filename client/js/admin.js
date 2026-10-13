@@ -451,6 +451,9 @@ async function loadSkins() {
             </div>
           </div>
           <div class="skin-admin-footer">
+            <a href="./bundle-editor.html?id=${encodeURIComponent(skin.id)}" class="btn btn-sm btn-warning" style="text-decoration: none;" title="تعديل صور حزمة السكنات في محرر الحزم">
+              📦 محرر الحزمة
+            </a>
             <button class="btn btn-sm btn-outline edit-skin-btn"
                     data-id="${skin.id}"
                     data-game="${skin.gameType}"

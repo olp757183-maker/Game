@@ -102,19 +102,26 @@ function renderSkins() {
     if (!currentUser || currentUser.isGuest) {
       actionBtnHtml = `<button class="btn btn-primary btn-skin-action btn-buy-skin" data-id="${skin.id}" data-price="${skin.price}">شراء (${skin.price} نقطة)</button>`;
     } else if (isEquipped) {
-      actionBtnHtml = '<button class="btn btn-outline btn-skin-action" disabled style="color: var(--success); border-color: var(--success); cursor: default;">✓ مُفعّل حالياً</button>';
+      actionBtnHtml = `
+        <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
+          <button class="btn btn-outline btn-skin-action" disabled style="color: var(--success); border-color: var(--success); cursor: default; padding: 0.35rem 0.6rem;">✓ مُفعّل حالياً</button>
+          <button class="btn btn-xs btn-outline btn-revert-default" data-game="${skin.gameType}" title="العودة للمظهر الافتراضي للعبة" style="color: var(--text-muted); border-color: var(--border);">↩ الافتراضي</button>
+        </div>
+      `;
     } else if (isOwned) {
       actionBtnHtml = `<button class="btn btn-outline btn-skin-action btn-equip-skin" data-id="${skin.id}" data-game="${skin.gameType}" style="border-color: var(--accent); color: var(--accent);">تفعيل السكن</button>`;
     } else {
       actionBtnHtml = `<button class="btn btn-primary btn-skin-action btn-buy-skin" data-id="${skin.id}" data-price="${skin.price}">شراء مقابل ${skin.price} نقطة</button>`;
     }
 
+    const previewThumb = skin.previewUrl ? `<img src="${skin.previewUrl}" alt="${escapeHtml(skin.name)}" style="max-height: 85%; max-width: 85%; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));">` : `<span class="skin-demo-symbol">${gameIcons[skin.gameType] || '⭐'}</span>`;
+
     return `
       <div class="store-skin-card ${themeClass} ${isEquipped ? 'is-equipped' : ''}">
         <div class="skin-card-header">
           <span class="skin-game-tag">${gameNames[skin.gameType] || skin.gameType}</span>
           <div class="skin-visual-demo">
-            <span class="skin-demo-symbol">${gameIcons[skin.gameType] || '⭐'}</span>
+            ${previewThumb}
           </div>
         </div>
         <div class="skin-card-body">
@@ -127,13 +134,39 @@ function renderSkins() {
             <span>${skin.price}</span>
             <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">نقطة</span>
           </div>
-          <div>
+          <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-sm btn-outline btn-preview-bundle" data-id="${skin.id}" title="معاينة محتويات وحجارة/قطع الحزمة">👁️ معاينة</button>
             ${actionBtnHtml}
           </div>
         </div>
       </div>
     `;
   }).join('');
+
+  // Attach Preview Handlers
+  container.querySelectorAll('.btn-preview-bundle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const skinId = btn.getAttribute('data-id');
+      const skin = allStoreSkins.find(s => s.id === skinId);
+      if (skin) openBundlePreviewModal(skin);
+    });
+  });
+
+  // Attach Revert to Default Handlers
+  container.querySelectorAll('.btn-revert-default').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const gameType = btn.getAttribute('data-game');
+      try {
+        await api.equipSkin(gameType, 'default');
+        sfx.click();
+        showToast('تمت العودة إلى المظهر الافتراضي للعبة بنجاح!', 'info');
+        await refreshUserState();
+        await loadSkins();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  });
 
   // Attach Buy Handlers
   container.querySelectorAll('.btn-buy-skin').forEach(btn => {
@@ -228,3 +261,73 @@ function openPurchaseModal(skin) {
 
   modal?.classList.add('active');
 }
+
+async function openBundlePreviewModal(skin) {
+  const modal = document.getElementById('modal-preview-bundle');
+  if (!modal) return;
+
+  const infoEl = document.getElementById('bundle-preview-info');
+  const itemsEl = document.getElementById('bundle-preview-items');
+  const titleEl = document.getElementById('preview-modal-title');
+  const buyBtn = document.getElementById('preview-buy-btn');
+
+  if (titleEl) titleEl.textContent = `👁️ معاينة: ${skin.name}`;
+  if (infoEl) {
+    infoEl.innerHTML = `
+      <div>
+        <div style="font-weight: 800; font-size: 1.1rem;">${escapeHtml(skin.name)}</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">${escapeHtml(skin.description || '')}</div>
+      </div>
+      <div style="font-weight: 800; color: var(--warning); font-size: 1.2rem;">
+        ⭐ ${skin.price} نقطة
+      </div>
+    `;
+  }
+
+  if (buyBtn) {
+    buyBtn.style.display = skin.isOwned ? 'none' : 'inline-block';
+    buyBtn.onclick = () => {
+      modal.style.display = 'none';
+      openPurchaseModal(skin);
+    };
+  }
+
+  if (itemsEl) {
+    itemsEl.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);">جاري تحميل محتويات الحزمة...</div>';
+  }
+
+  modal.style.display = 'flex';
+
+  // Setup close buttons
+  document.getElementById('close-preview-modal').onclick = () => { modal.style.display = 'none'; };
+  document.getElementById('cancel-preview-btn').onclick = () => { modal.style.display = 'none'; };
+
+  try {
+    const res = await fetch(`/api/store/bundles/${encodeURIComponent(skin.id)}/preview`);
+    if (!res.ok) throw new Error('فشل جلب تفاصيل الحزمة');
+    const data = await res.json();
+    const items = data.items || [];
+
+    if (itemsEl) {
+      if (items.length === 0) {
+        itemsEl.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);">هذه الحزمة تعتمد على المظهر البرمجي العام.</div>';
+      } else {
+        itemsEl.innerHTML = items.map(item => `
+          <div style="background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            ${item.assetUrl ? `
+              <img src="${item.assetUrl}" alt="${item.nameAr}" style="width: 50px; height: 50px; object-fit: contain; margin-bottom: 0.25rem;">
+            ` : `
+              <div style="font-size: 1.8rem; margin-bottom: 0.25rem;">${item.symbol || '🎴'}</div>
+            `}
+            <span style="font-size: 0.7rem; color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;" title="${item.nameAr}">${escapeHtml(item.nameAr)}</span>
+          </div>
+        `).join('');
+      }
+    }
+  } catch (err) {
+    if (itemsEl) {
+      itemsEl.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 2rem;">سكن كلاسيكي (${escapeHtml(skin.name)})</div>`;
+    }
+  }
+}
+

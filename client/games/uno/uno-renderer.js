@@ -5,6 +5,7 @@
 
 import { escapeHtml } from '../../js/utils.js';
 import i18n from '../../js/language.js';
+import skinAssets from '../../js/skin-assets.js';
 
 export function getUnoSymbol(value) {
   switch (value) {
@@ -22,7 +23,8 @@ export function renderUnoCard(card, options = {}) {
     inHand = true,
     isMyTurn = true,
     isSelected = false,
-    interactive = true
+    interactive = true,
+    skinId = null
   } = options;
 
   if (!card) return '';
@@ -39,6 +41,17 @@ export function renderUnoCard(card, options = {}) {
     interactive ? 'interactive' : ''
   ].filter(Boolean).join(' ');
 
+  const customImg = skinId ? skinAssets.getUnoCardAsset(skinId, card) : null;
+  const innerContent = customImg
+    ? `<img src="${customImg}" class="uno-card-custom-img" alt="${color} ${val}" />`
+    : `
+        <span class="uno-corner top-left">${symbol}</span>
+        <div class="uno-card-oval">
+          <span class="uno-center-value">${symbol}</span>
+        </div>
+        <span class="uno-corner bottom-right">${symbol}</span>
+      `;
+
   return `
     <div class="${classes}"
          data-id="${card.id || ''}"
@@ -46,24 +59,26 @@ export function renderUnoCard(card, options = {}) {
          data-value="${val}"
          title="${color.toUpperCase()} ${val}">
       <div class="uno-card-inner">
-        <span class="uno-corner top-left">${symbol}</span>
-        <div class="uno-card-oval">
-          <span class="uno-center-value">${symbol}</span>
-        </div>
-        <span class="uno-corner bottom-right">${symbol}</span>
+        ${innerContent}
       </div>
     </div>
   `;
 }
 
 export function renderUnoCardBack(options = {}) {
-  const { count = null, label = '' } = options;
+  const { count = null, label = '', skinId = null } = options;
+  const customBackImg = skinId ? skinAssets.getUnoBackAsset(skinId) : null;
+
   return `
     <div class="uno-card card-back" title="UNO Deck">
       <div class="uno-card-inner">
-        <div class="uno-back-oval">
-          <span class="uno-back-text">UNO</span>
-        </div>
+        ${customBackImg ? `
+          <img src="${customBackImg}" class="uno-card-custom-img" alt="UNO Back" />
+        ` : `
+          <div class="uno-back-oval">
+            <span class="uno-back-text">UNO</span>
+          </div>
+        `}
         ${count !== null ? `<span class="pile-count-badge">${count}</span>` : ''}
         ${label ? `<span class="pile-label-text">${label}</span>` : ''}
       </div>
@@ -151,13 +166,13 @@ export function renderUNO(state, options = {}) {
       <div class="game-table uno-center-table">
         <!-- Draw Pile (Direct Interactive Element) -->
         <div class="draw-pile-slot ${isMyTurn ? 'can-draw' : ''}" id="uno-draw-pile" title="${isMyTurn ? (state.hasDrawnThisTurn ? 'اضغط لتمرير الدور أو اسحب' : 'اضغط على الكومة لسحب بطاقة') : 'كومة السحب'}">
-          ${renderUnoCardBack({ count: state.deckCount, label: i18n.t('unoDrawBtn') })}
+          ${renderUnoCardBack({ count: state.deckCount, label: i18n.t('unoDrawBtn'), skinId: mySkin })}
           <span class="pile-label">${i18n.t('unoDrawBtn')} (${state.deckCount})</span>
         </div>
 
         <!-- Discard Pile -->
         <div class="discard-pile-slot" id="uno-discard-pile">
-          ${state.topDiscard ? renderUnoCard(state.topDiscard, { inHand: false, interactive: false }) : '<div class="empty-pile"></div>'}
+          ${state.topDiscard ? renderUnoCard(state.topDiscard, { inHand: false, interactive: false, skinId: mySkin }) : '<div class="empty-pile"></div>'}
           <span class="pile-label">${i18n.t('unoDiscardLabel') || 'Top Card'}</span>
         </div>
       </div>
@@ -187,7 +202,8 @@ export function renderUNO(state, options = {}) {
             inHand: true,
             isMyTurn,
             isSelected: (card.id === selectedCardId),
-            interactive: true
+            interactive: true,
+            skinId: mySkin
           })).join('')}
         </div>
       </div>

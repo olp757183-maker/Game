@@ -96,7 +96,7 @@ export const users = {
   },
 
   createGuest(nickname) {
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const randomSuffix = Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 6);
     const username = nickname ? `${nickname.trim().slice(0, 10)}_${randomSuffix}` : `Guest_${randomSuffix}`;
     const id = crypto.randomUUID();
 

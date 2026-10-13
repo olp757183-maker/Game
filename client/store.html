@@ -105,6 +105,28 @@
     </div>
   </div>
 
+  <!-- Bundle Preview Modal -->
+  <div class="store-modal-backdrop" id="modal-preview-bundle" style="display: none;">
+    <div class="store-modal-box" style="max-width: 800px; width: 95%;">
+      <div class="store-modal-header">
+        <h3 style="font-weight: 800; font-size: 1.15rem;" id="preview-modal-title">👁️ معاينة حزمة السكنات</h3>
+        <button class="icon-btn modal-close-btn" id="close-preview-modal">✕</button>
+      </div>
+      <div class="store-modal-body" style="max-height: 65vh; overflow-y: auto;">
+        <div id="bundle-preview-info" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0.75rem 1rem; background: var(--surface-alt); border-radius: var(--radius-md);">
+          <!-- Info filled dynamically -->
+        </div>
+        <div id="bundle-preview-items" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0.6rem;">
+          <!-- Items filled dynamically -->
+        </div>
+      </div>
+      <div class="store-modal-footer">
+        <button class="btn btn-outline modal-close-btn" id="cancel-preview-btn">إغلاق</button>
+        <button class="btn btn-primary" id="preview-buy-btn">شراء الآن</button>
+      </div>
+    </div>
+  </div>
+
   <footer class="site-footer">
     <p>© 2026 Classic Games Online — Game Store</p>
   </footer>

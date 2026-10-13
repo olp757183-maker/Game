@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
 
+import fs from 'node:fs';
 import auth from './auth.js';
 import users from './users.js';
 import rooms from './rooms.js';
@@ -15,11 +16,17 @@ import database from './database.js';
 import { setupSocketServer, broadcastLobbyRoomCreated, broadcastLobbyRoomUpdated, broadcastRoomState, disconnectBannedUser } from './socket.js';
 import { GAME_INFO, GAME_TYPES } from '../shared/constants.js';
 import { validateUsername, validateEmail, validatePassword, validateRoomCode, validateGameType } from '../shared/validation.js';
+import { GAME_ASSETS_SPEC, validateAssetKey, getExpectedTotalCount } from '../shared/game-assets-spec.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CLIENT_DIR = path.join(__dirname, '..', 'client');
 const SHARED_DIR = path.join(__dirname, '..', 'shared');
+const UPLOADS_DIR = path.join(CLIENT_DIR, 'uploads');
+
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
 
 const app = express();
 app.set('trust proxy', 1);
@@ -46,14 +53,16 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // Health Check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Serve client static files & shared directory
+// Serve uploads directory, client static files & shared directory
+app.use('/uploads', express.static(UPLOADS_DIR));
 app.use('/shared', express.static(SHARED_DIR));
 app.use(express.static(CLIENT_DIR));
 
@@ -565,6 +574,260 @@ app.delete('/api/admin/skins/:id', auth.requirePermission('skins.delete'), (req,
 });
 
 // ==========================================
+// BUNDLE EDITOR & ASSET MANAGEMENT API
+// ==========================================
+
+const MIME_TO_EXT = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/jpg': '.jpg',
+  'image/webp': '.webp',
+  'image/svg+xml': '.svg'
+};
+
+function validateImageBuffer(buffer, mimeType) {
+  if (!buffer || buffer.length < 4) return false;
+  if (mimeType === 'image/png') {
+    return buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
+  }
+  if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
+    return buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+  }
+  if (mimeType === 'image/webp') {
+    return buffer.length >= 12 &&
+      buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+      buffer.subarray(8, 12).toString('ascii') === 'WEBP';
+  }
+  if (mimeType === 'image/svg+xml') {
+    const text = buffer.subarray(0, 2048).toString('utf8');
+    return text.includes('<svg') || text.includes('<?xml');
+  }
+  return false;
+}
+
+// Get bundle details and completeness
+app.get('/api/admin/bundles/:id', auth.requirePermission('skins.view'), (req, res) => {
+  try {
+    const skin = database.getSkinById(req.params.id);
+    if (!skin) return res.status(404).json({ error: 'Bundle not found', errorAr: 'الحزمة غير موجودة' });
+
+    const spec = GAME_ASSETS_SPEC[skin.gameType] || { items: [] };
+    const totalRequired = spec.items.length;
+    const assets = skin.assets || {};
+    const uploadedKeys = Object.keys(assets);
+    const uploadedCount = uploadedKeys.length;
+    const missingItems = spec.items.filter(item => !assets[item.key]);
+
+    res.json({
+      bundle: skin,
+      spec,
+      stats: {
+        totalRequired,
+        uploadedCount,
+        missingCount: missingItems.length,
+        isComplete: uploadedCount >= totalRequired && totalRequired > 0,
+        percent: totalRequired > 0 ? Math.round((uploadedCount / totalRequired) * 100) : 0
+      },
+      missingItems
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Upload individual asset for bundle item
+app.post('/api/admin/bundles/:id/asset', auth.requireAdmin, (req, res) => {
+  try {
+    // Check permission
+    if (req.user.role === 'sub_admin' && !database.hasPermission(req.user.id, 'skins.edit') && !database.hasPermission(req.user.id, 'skins.create')) {
+      return res.status(403).json({ error: 'Forbidden: Missing skins.edit permission', errorAr: 'ليس لديك صلاحية تعديل الحزم' });
+    }
+
+    const bundleId = req.params.id;
+    const skin = database.getSkinById(bundleId);
+    if (!skin) return res.status(404).json({ error: 'Bundle not found', errorAr: 'الحزمة غير موجودة' });
+
+    const { itemKey, imageBase64, mimeType } = req.body;
+    if (!itemKey) {
+      return res.status(400).json({ error: 'itemKey is required', errorAr: 'مفتاح العنصر مطلوب' });
+    }
+
+    // Validate itemKey against authoritative spec
+    const keyValidation = validateAssetKey(skin.gameType, itemKey);
+    if (!keyValidation.valid) {
+      return res.status(400).json({ error: keyValidation.error, errorAr: 'مفتاح العنصر غير صالح للعبة المختارة' });
+    }
+
+    if (!mimeType || !MIME_TO_EXT[mimeType]) {
+      return res.status(400).json({ error: 'Unsupported image type. Use PNG, JPG, WebP, or SVG', errorAr: 'صيغة الصورة غير مدعومة. يرجى استخدام PNG أو JPG أو WebP أو SVG' });
+    }
+
+    if (!imageBase64 || typeof imageBase64 !== 'string') {
+      return res.status(400).json({ error: 'imageBase64 is required', errorAr: 'بيانات الصورة مطلوبة' });
+    }
+
+    const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, '');
+    const buffer = Buffer.from(cleanBase64, 'base64');
+
+    // Size limit: 5MB
+    if (buffer.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Image exceeds 5MB size limit', errorAr: 'حجم الصورة يتجاوز الحد الأقصى (5 ميجابايت)' });
+    }
+
+    // Format & security validation
+    if (!validateImageBuffer(buffer, mimeType)) {
+      return res.status(400).json({ error: 'Corrupt or disallowed image file format', errorAr: 'الملف غير صالح أو لا يطابق صيغة الصورة المصرح بها' });
+    }
+
+    const bundleDir = path.join(UPLOADS_DIR, 'skins', bundleId);
+    if (!fs.existsSync(bundleDir)) {
+      fs.mkdirSync(bundleDir, { recursive: true });
+    }
+
+    const ext = MIME_TO_EXT[mimeType];
+    const filename = `${itemKey}${ext}`;
+    const filePath = path.join(bundleDir, filename);
+
+    // Clean up any old files with different extensions for this item
+    for (const testExt of Object.values(MIME_TO_EXT)) {
+      const oldPath = path.join(bundleDir, `${itemKey}${testExt}`);
+      if (fs.existsSync(oldPath) && oldPath !== filePath) {
+        try { fs.unlinkSync(oldPath); } catch (e) {}
+      }
+    }
+
+    fs.writeFileSync(filePath, buffer);
+
+    const assetUrl = `/uploads/skins/${bundleId}/${filename}`;
+    const updatedSkin = database.setSkinAsset(bundleId, itemKey, assetUrl);
+
+    // If bundle doesn't have a previewUrl yet, use first uploaded card/piece as bundle preview!
+    if (!updatedSkin.previewUrl || updatedSkin.previewUrl.startsWith('/assets/skins/')) {
+      database.updateSkin(bundleId, { previewUrl: assetUrl });
+    }
+
+    database.recordAdminAudit({
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      action: 'upload_bundle_asset',
+      targetType: 'skin',
+      targetId: bundleId,
+      details: { itemKey, assetUrl, size: buffer.length }
+    });
+
+    const spec = GAME_ASSETS_SPEC[skin.gameType] || { items: [] };
+    const uploadedCount = Object.keys(updatedSkin.assets || {}).length;
+
+    res.json({
+      success: true,
+      itemKey,
+      assetUrl,
+      skin: updatedSkin,
+      stats: {
+        totalRequired: spec.items.length,
+        uploadedCount,
+        isComplete: uploadedCount >= spec.items.length
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete individual asset from bundle
+app.delete('/api/admin/bundles/:id/asset/:itemKey', auth.requireAdmin, (req, res) => {
+  try {
+    if (req.user.role === 'sub_admin' && !database.hasPermission(req.user.id, 'skins.edit')) {
+      return res.status(403).json({ error: 'Forbidden: Missing skins.edit permission', errorAr: 'ليس لديك صلاحية تعديل الحزم' });
+    }
+
+    const bundleId = req.params.id;
+    const itemKey = req.params.itemKey;
+    const skin = database.getSkinById(bundleId);
+    if (!skin) return res.status(404).json({ error: 'Bundle not found', errorAr: 'الحزمة غير موجودة' });
+
+    const bundleDir = path.join(UPLOADS_DIR, 'skins', bundleId);
+    for (const ext of Object.values(MIME_TO_EXT)) {
+      const p = path.join(bundleDir, `${itemKey}${ext}`);
+      if (fs.existsSync(p)) {
+        try { fs.unlinkSync(p); } catch (e) {}
+      }
+    }
+
+    const updatedSkin = database.deleteSkinAsset(bundleId, itemKey);
+
+    database.recordAdminAudit({
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      action: 'delete_bundle_asset',
+      targetType: 'skin',
+      targetId: bundleId,
+      details: { itemKey }
+    });
+
+    const spec = GAME_ASSETS_SPEC[skin.gameType] || { items: [] };
+    const uploadedCount = Object.keys(updatedSkin.assets || {}).length;
+
+    res.json({
+      success: true,
+      itemKey,
+      skin: updatedSkin,
+      stats: {
+        totalRequired: spec.items.length,
+        uploadedCount,
+        isComplete: uploadedCount >= spec.items.length
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Public single skin / bundle details endpoint for game renderers and store
+app.get('/api/skins/:id', (req, res) => {
+  try {
+    const skin = database.getSkinById(req.params.id);
+    if (!skin) return res.status(404).json({ error: 'Skin not found', errorAr: 'السكن غير موجود' });
+    res.json({ skin });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Preview bundle details for Store modal (public / all players)
+app.get('/api/store/bundles/:id/preview', (req, res) => {
+  try {
+    const skin = database.getSkinById(req.params.id);
+    if (!skin) return res.status(404).json({ error: 'Skin not found', errorAr: 'السكن غير موجود' });
+
+    const spec = GAME_ASSETS_SPEC[skin.gameType] || { items: [] };
+    const assets = skin.assets || {};
+    const items = spec.items.map(item => ({
+      key: item.key,
+      nameAr: item.nameAr,
+      nameEn: item.nameEn,
+      category: item.category,
+      symbol: item.symbol || null,
+      color: item.color || null,
+      hasCustomAsset: Boolean(assets[item.key]),
+      assetUrl: assets[item.key] || null
+    }));
+
+    res.json({
+      bundle: skin,
+      gameType: skin.gameType,
+      items,
+      stats: {
+        totalRequired: spec.items.length,
+        uploadedCount: Object.keys(assets).length
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
 // STORE & SKINS API ROUTES
 // ==========================================
 
@@ -674,6 +937,14 @@ app.get('/admin', (req, res) => {
 
 app.get('/admin.html', (req, res) => {
   res.sendFile(path.join(CLIENT_DIR, 'admin.html'));
+});
+
+app.get('/bundle-editor', (req, res) => {
+  res.sendFile(path.join(CLIENT_DIR, 'bundle-editor.html'));
+});
+
+app.get('/bundle-editor.html', (req, res) => {
+  res.sendFile(path.join(CLIENT_DIR, 'bundle-editor.html'));
 });
 
 app.get('/room/:idOrCode', (req, res) => {

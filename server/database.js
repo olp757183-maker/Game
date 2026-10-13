@@ -179,6 +179,7 @@ try { db.exec('ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0;'); } ca
 try { db.exec('ALTER TABLE users ADD COLUMN ban_reason TEXT;'); } catch (e) {}
 try { db.exec('ALTER TABLE users ADD COLUMN banned_at INTEGER;'); } catch (e) {}
 try { db.exec('ALTER TABLE users ADD COLUMN banned_by TEXT;'); } catch (e) {}
+try { db.exec('ALTER TABLE skins ADD COLUMN assets_json TEXT;'); } catch (e) {}
 
 function formatUser(user) {
   if (!user) return null;
@@ -548,12 +549,12 @@ export const database = {
   // ==========================================
   // Skins & Store Management
   // ==========================================
-  createSkin({ id, gameType, name, description = '', price = 0, status = 'published', previewUrl = '', configJson = '{}', createdBy = 'admin' }) {
+  createSkin({ id, gameType, name, description = '', price = 0, status = 'published', previewUrl = '', configJson = '{}', assetsJson = '{}', createdBy = 'admin' }) {
     const now = Date.now();
     const skinId = id || `skin_${gameType}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const stmt = db.prepare(`
-      INSERT INTO skins (id, game_type, name, description, price, status, preview_url, config_json, created_by, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO skins (id, game_type, name, description, price, status, preview_url, config_json, assets_json, created_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       skinId,
@@ -564,6 +565,7 @@ export const database = {
       status,
       previewUrl,
       typeof configJson === 'string' ? configJson : JSON.stringify(configJson),
+      typeof assetsJson === 'string' ? assetsJson : JSON.stringify(assetsJson),
       createdBy,
       now,
       now
@@ -583,9 +585,15 @@ export const database = {
     if (updates.price !== undefined) { fields.push('price = ?'); values.push(Math.max(0, parseInt(updates.price, 10) || 0)); }
     if (updates.status !== undefined) { fields.push('status = ?'); values.push(updates.status); }
     if (updates.previewUrl !== undefined) { fields.push('preview_url = ?'); values.push(updates.previewUrl); }
-    if (updates.configJson !== undefined) {
+    if (updates.configJson !== undefined || updates.config !== undefined) {
+      const cVal = updates.configJson !== undefined ? updates.configJson : updates.config;
       fields.push('config_json = ?');
-      values.push(typeof updates.configJson === 'string' ? updates.configJson : JSON.stringify(updates.configJson));
+      values.push(typeof cVal === 'string' ? cVal : JSON.stringify(cVal));
+    }
+    if (updates.assetsJson !== undefined || updates.assets !== undefined) {
+      const aVal = updates.assetsJson !== undefined ? updates.assetsJson : updates.assets;
+      fields.push('assets_json = ?');
+      values.push(typeof aVal === 'string' ? aVal : JSON.stringify(aVal));
     }
 
     fields.push('updated_at = ?');
@@ -594,6 +602,22 @@ export const database = {
     values.push(id);
     db.prepare(`UPDATE skins SET ${fields.join(', ')} WHERE id = ?`).run(...values);
     return this.getSkinById(id);
+  },
+
+  setSkinAsset(skinId, itemKey, assetUrl) {
+    const skin = this.getSkinById(skinId);
+    if (!skin) return null;
+    const currentAssets = skin.assets || {};
+    currentAssets[itemKey] = assetUrl;
+    return this.updateSkin(skinId, { assetsJson: currentAssets });
+  },
+
+  deleteSkinAsset(skinId, itemKey) {
+    const skin = this.getSkinById(skinId);
+    if (!skin) return null;
+    const currentAssets = skin.assets || {};
+    delete currentAssets[itemKey];
+    return this.updateSkin(skinId, { assetsJson: currentAssets });
   },
 
   deleteSkin(id) {
@@ -614,6 +638,7 @@ export const database = {
       status: r.status,
       previewUrl: r.preview_url,
       config: r.config_json ? JSON.parse(r.config_json) : {},
+      assets: r.assets_json ? JSON.parse(r.assets_json) : {},
       createdBy: r.created_by,
       createdAt: r.created_at,
       updatedAt: r.updated_at
@@ -642,6 +667,7 @@ export const database = {
       status: r.status,
       previewUrl: r.preview_url,
       config: r.config_json ? JSON.parse(r.config_json) : {},
+      assets: r.assets_json ? JSON.parse(r.assets_json) : {},
       createdBy: r.created_by,
       createdAt: r.created_at,
       updatedAt: r.updated_at
@@ -670,6 +696,7 @@ export const database = {
       status: r.status,
       previewUrl: r.preview_url,
       config: r.config_json ? JSON.parse(r.config_json) : {},
+      assets: r.assets_json ? JSON.parse(r.assets_json) : {},
       acquiredAt: r.acquired_at,
       pricePaid: r.price_paid
     }));

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="محرر حزم سكنات الألعاب — تخصيص أوراق Uno وقطع الشطرنج وأحجار الدومينو ونشرها في المتجر">
+  <title>محرر حزم السكنات — Classic Games</title>
+
+  <link rel="stylesheet" href="./css/main.css">
+  <link rel="stylesheet" href="./css/responsive.css">
+  <link rel="stylesheet" href="./css/admin.css">
+  <link rel="stylesheet" href="./css/bundle-editor.css">
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <a href="./index.html" class="brand-link">
+          <span class="brand-icon">🎮</span>
+          <span class="brand-title">Classic Games</span>
+        </a>
+      </div>
+
+      <nav class="site-nav">
+        <button id="mobile-menu-toggle" class="mobile-menu-btn" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+        <ul id="site-nav-links" class="nav-links">
+          <li><a href="./index.html" class="nav-link">الرئيسية</a></li>
+          <li><a href="./lobby.html" class="nav-link">الغرف</a></li>
+          <li><a href="./store.html" class="nav-link">المتجر</a></li>
+          <li><a href="./profile.html" class="nav-link">الملف الشخصي</a></li>
+          <li><a href="./settings.html" class="nav-link">الإعدادات</a></li>
+          <li><a href="./admin.html" class="nav-link active">🛡️ الإدارة</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <a href="./store.html" id="header-store-btn" class="icon-btn store-icon-btn" title="المتجر" aria-label="المتجر" style="text-decoration: none;">🛒</a>
+        <button id="theme-toggle-btn" class="icon-btn" title="تبديل المظهر" aria-label="Toggle Theme">☀️</button>
+        <button id="sound-toggle-btn" class="icon-btn" title="الصوت" aria-label="Toggle Sound">🔊</button>
+        <div id="header-user-actions" class="user-actions-wrap"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Main Layout -->
+  <main class="bundle-editor-layout">
+    <!-- Top Bar: Title & Navigation back to Admin -->
+    <section class="editor-header-bar">
+      <div class="header-titles">
+        <div class="breadcrumb-trail">
+          <a href="./admin.html">لوحة الإدارة</a>
+          <span class="sep">/</span>
+          <span>سكنات الألعاب</span>
+          <span class="sep">/</span>
+          <span class="current">محرر حزم السكنات الشامل</span>
+        </div>
+        <h1 class="editor-main-title">📦 محرر حزم السكنات والمتجر</h1>
+        <p class="editor-subtitle">
+          أنشئ حزم سكنات متكاملة، ارفع صورًا منفصلة لكل ورقة وقطعة في اللعبة، عاين المظهر الفعلي، وانشرها للبيع بالنقاط في المتجر.
+        </p>
+      </div>
+
+      <div class="header-action-group">
+        <a href="./admin.html" class="btn btn-outline btn-sm">↩ العودة للوحة الإدارة</a>
+        <a href="./store.html" class="btn btn-outline btn-sm">🛒 فتح المتجر</a>
+      </div>
+    </section>
+
+    <!-- Bundle Setup & Config Card -->
+    <section class="bundle-setup-card">
+      <div class="setup-grid">
+        <!-- 1. Game Selector -->
+        <div class="form-group">
+          <label class="form-label" for="editor-game-select">
+            🎮 اللعبة المستهدفة:
+          </label>
+          <select id="editor-game-select" class="form-control">
+            <option value="uno">أونو (UNO) — 55 عنصراً مطلوباً</option>
+            <option value="chess">شطرنج (Chess) — 14 عنصراً مطلوباً</option>
+            <option value="domino">دومينو (Domino) — 29 عنصراً مطلوباً</option>
+          </select>
+          <small class="form-hint" id="game-items-count-hint">55 ورقة وظهر بطاقة</small>
+        </div>
+
+        <!-- 2. Existing Bundle or New -->
+        <div class="form-group">
+          <label class="form-label" for="editor-bundle-select">
+            📁 اختر حزمة للتعديل أو أنشئ جديدة:
+          </label>
+          <div class="input-with-button">
+            <select id="editor-bundle-select" class="form-control">
+              <option value="new">+ إنشاء حزمة جديدة...</option>
+            </select>
+            <button class="btn btn-sm btn-outline" id="btn-refresh-bundles" title="تحديث قائمة الحزم">🔄</button>
+          </div>
+        </div>
+
+        <!-- 3. Bundle Name -->
+        <div class="form-group">
+          <label class="form-label" for="editor-bundle-name">
+            🏷️ اسم الحزمة:
+          </label>
+          <input type="text" id="editor-bundle-name" class="form-control" placeholder="مثال: الخيال الملكي (Royal Fantasy)" maxlength="60">
+        </div>
+
+        <!-- 4. Price in Points -->
+        <div class="form-group">
+          <label class="form-label" for="editor-bundle-price">
+            🪙 سعر الحزمة بالنقاط:
+          </label>
+          <input type="number" id="editor-bundle-price" class="form-control" min="0" max="99999" value="25" placeholder="25">
+        </div>
+      </div>
+
+      <!-- Description Row -->
+      <div class="form-group" style="margin-top: 1rem;">
+        <label class="form-label" for="editor-bundle-desc">
+          📝 وصف الحزمة:
+        </label>
+        <input type="text" id="editor-bundle-desc" class="form-control" placeholder="وصف موجز يظهر في المتجر يوضح طابع وتفاصيل الحزمة..." maxlength="160">
+      </div>
+
+      <!-- Status, Progress Bar & Main Actions -->
+      <div class="setup-footer">
+        <div class="bundle-progress-wrapper">
+          <div class="progress-labels">
+            <span class="progress-title">حالة اكتمال صور الحزمة:</span>
+            <span class="progress-counts" id="progress-counts-text">0 / 55 مكتمل (0%)</span>
+            <span class="badge" id="bundle-status-badge">مسودة (Draft)</span>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progress-bar-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="setup-actions">
+          <button class="btn btn-outline" id="btn-save-draft" title="حفظ الحزمة كمسودة دون نشرها في المتجر">
+            💾 حفظ كمسودة
+          </button>
+          <button class="btn btn-secondary" id="btn-preview-bundle" title="معاينة شاملة لجميع أوراق وقطع الحزمة">
+            👁️ معاينة الحزمة
+          </button>
+          <button class="btn btn-primary" id="btn-publish-bundle" title="نشر الحزمة وتفعيل بيعها في المتجر">
+            🚀 نشر في المتجر
+          </button>
+          <button class="btn btn-danger btn-sm" id="btn-delete-bundle" style="display: none;" title="حذف الحزمة بالكامل">
+            🗑️ حذف
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Asset Editor Controls (Tabs, Search, Filter) -->
+    <section class="asset-toolbar-section">
+      <div class="categories-tabs-scroll" id="category-tabs-container">
+        <!-- Dynamically rendered category pills based on game -->
+      </div>
+
+      <div class="toolbar-filter-controls">
+        <div class="search-box-wrap">
+          <input type="search" id="asset-search-input" class="form-control form-control-sm" placeholder="🔍 ابحث عن ورقة أو قطعة...">
+        </div>
+
+        <div class="filter-toggles">
+          <button class="filter-toggle-btn active" data-filter="all" id="filter-all-btn">الكل (<span id="count-all-badge">0</span>)</button>
+          <button class="filter-toggle-btn" data-filter="completed" id="filter-completed-btn">المكتملة (<span id="count-completed-badge">0</span>)</button>
+          <button class="filter-toggle-btn" data-filter="missing" id="filter-missing-btn">الناقصة (<span id="count-missing-badge">0</span>)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Assets Grid Area -->
+    <section class="assets-grid-container" id="assets-grid-container" aria-label="شبكة رفع صور الأوراق والقطع">
+      <!-- Dynamically generated asset cards -->
+      <div class="loading-state-card">
+        <div class="spinner"></div>
+        <p>جاري تجهيز عناصر محرر الحزم...</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- HIDDEN FILE INPUT FOR ASSET UPLOADS -->
+  <input type="file" id="hidden-asset-file-input" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display: none;">
+
+  <!-- PREVIEW MODAL -->
+  <div class="modal-backdrop" id="bundle-preview-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="preview-modal-title">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <h2 class="modal-title" id="preview-modal-title">👁️ معاينة حزمة السكنات الكاملة</h2>
+          <span class="badge badge-info" id="preview-game-badge">UNO</span>
+        </div>
+        <button class="icon-btn modal-close-btn" id="btn-close-preview" aria-label="إغلاق">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="preview-meta-strip">
+          <div>
+            <h3 id="preview-bundle-name-display" style="font-size: 1.2rem; margin-bottom: 0.25rem;">اسم الحزمة</h3>
+            <p id="preview-bundle-desc-display" style="color: var(--text-muted); font-size: 0.9rem;">وصف الحزمة</p>
+          </div>
+          <div class="preview-price-tag">
+            <span>السعر:</span>
+            <strong id="preview-bundle-price-display">25</strong>
+            <span>نقطة</span>
+          </div>
+        </div>
+
+        <div class="preview-status-summary" id="preview-status-summary">
+          <!-- Filled by JS -->
+        </div>
+
+        <div class="preview-showcase-grid" id="preview-showcase-grid">
+          <!-- All cards/pieces displayed here -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btn-preview-close-footer">إغلاق المعاينة</button>
+        <button class="btn btn-primary" id="btn-preview-publish-action">🚀 اعتماد ونشر في المتجر</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script type="module" src="./js/language.js"></script>
+  <script type="module" src="./js/utils.js"></script>
+  <script type="module" src="./js/skin-assets.js"></script>
+  <script type="module" src="./js/bundle-editor.js"></script>
+</body>
+</html>

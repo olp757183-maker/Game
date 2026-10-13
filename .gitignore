@@ -20,3 +20,9 @@ Thumbs.db
 logs/
 *.log
 npm-debug.log*
+
+# Uploads
+client/uploads/*
+!client/uploads/.gitkeep
+!client/uploads/skins/
+!client/uploads/skins/.gitkeep

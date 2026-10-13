@@ -84,3 +84,76 @@
   font-size: 0.9rem;
   color: var(--text-muted);
 }
+
+/* Custom Form Validation & Field Errors */
+.form-control.is-invalid {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 2px var(--danger-glow) !important;
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.82rem;
+  margin-top: 0.35rem;
+  display: none;
+  align-items: center;
+  gap: 0.35rem;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.field-error.visible {
+  display: flex;
+}
+
+/* Email Domain Suggestions */
+.email-domain-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.suggestions-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-inline-end: 0.2rem;
+  font-weight: 600;
+}
+
+.domain-chip {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-family: inherit;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  transition: var(--transition);
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.domain-chip:hover, .domain-chip:focus {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+  color: var(--text);
+  outline: none;
+}
+
+.domain-chip.default-chip {
+  border-color: rgba(6, 182, 212, 0.45);
+  color: var(--accent);
+  font-weight: 700;
+  background: rgba(6, 182, 212, 0.08);
+}
+
+.domain-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+

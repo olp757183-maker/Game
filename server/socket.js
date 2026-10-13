@@ -253,7 +253,7 @@ export function setupSocketServer(httpServer) {
     });
 
     // Leave Room
-    socket.on(SOCKET_EVENTS.LEAVE_ROOM, ({ roomId }) => {
+    socket.on(SOCKET_EVENTS.LEAVE_ROOM, ({ roomId } = {}) => {
       try {
         console.log(`[ROOM LEAVE] socket=${socket.id} user=${user.username} roomId=${roomId}`);
         const targetRoomId = roomId || socketRoomMap.get(socket.id);

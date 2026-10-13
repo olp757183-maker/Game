@@ -397,3 +397,207 @@
 .player-connection-dot.disconnected {
   background: var(--danger);
 }
+
+/* ==========================================================================
+   Game Over & Round End Overlays (All Screens & Orientations)
+   ========================================================================== */
+
+#game-over-overlay,
+#round-end-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  height: 100dvh !important;
+  background: rgba(0, 0, 0, 0.85) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  z-index: 2000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  padding: clamp(8px, 2.5dvh, 20px) clamp(8px, 2.5dvw, 20px) !important;
+  padding-top: max(clamp(8px, 2.5dvh, 20px), env(safe-area-inset-top, 16px)) !important;
+  padding-bottom: max(clamp(8px, 2.5dvh, 20px), env(safe-area-inset-bottom, 16px)) !important;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+#game-over-overlay.active,
+#round-end-overlay.active {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Modal Boxes: Reset position to relative flow inside backdrop with margin: auto */
+.winner-fanfare-modal,
+.round-end-modal {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+  margin: auto !important;
+  width: min(520px, calc(100vw - 20px)) !important;
+  max-width: 100% !important;
+  max-height: calc(100dvh - 32px) !important;
+  max-height: calc(100vh - 32px) !important;
+  max-height: calc(100dvh - 32px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  border-radius: var(--radius-lg, 16px) !important;
+  background: var(--surface, #1e293b) !important;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12)) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+  animation: modalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  z-index: 2100 !important;
+  padding: 0 !important;
+  pointer-events: auto !important;
+}
+
+@keyframes modalPopIn {
+  0% { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Scrollable Content Body */
+.winner-modal-body,
+.round-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 1.5rem 1.5rem 0.85rem;
+  text-align: center;
+  overscroll-behavior: contain;
+}
+
+.winner-modal-body::-webkit-scrollbar,
+.round-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.winner-modal-body::-webkit-scrollbar-track,
+.round-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.winner-modal-body::-webkit-scrollbar-thumb,
+.round-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+/* Celebration Icons & Headings */
+.winner-celebration-emoji {
+  font-size: clamp(2.4rem, 6vh, 3.2rem);
+  line-height: 1.1;
+  margin-bottom: 0.25rem;
+  user-select: none;
+}
+
+.winner-title {
+  font-size: clamp(1.2rem, 3.5vw, 1.55rem);
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.winner-announcement-box {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md, 10px);
+}
+
+.winner-banner-text {
+  font-size: clamp(1.1rem, 3vw, 1.3rem);
+  font-weight: 800;
+  margin: 0.2rem 0;
+}
+
+.winner-reason-badge {
+  margin: 0.5rem 0;
+  padding: 0.35rem 0.85rem;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm, 6px);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.winner-scores-box {
+  margin: 1rem 0 0.5rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md, 8px);
+}
+
+.winner-scores-title {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.winner-scores-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.winner-score-pill {
+  padding: 0.35rem 0.75rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  font-size: 0.88rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Docked Action Footer: ALWAYS visible at bottom */
+.winner-modal-footer,
+.round-modal-footer {
+  flex-shrink: 0;
+  width: 100%;
+  padding: 0.85rem 1.5rem;
+  padding-bottom: max(0.85rem, env(safe-area-inset-bottom, 0.85rem));
+  background: var(--surface-alt, #151f30);
+  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  align-items: center;
+  z-index: 5;
+}
+
+.winner-action-btn {
+  width: 100%;
+  max-width: 360px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.98rem;
+  font-weight: 700;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md, 10px);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.winner-action-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+

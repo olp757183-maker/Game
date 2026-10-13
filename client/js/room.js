@@ -189,21 +189,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   socket.on(SOCKET_EVENTS.REMATCH_UPDATE, (data) => {
     console.log('[Room] Rematch update:', data);
     const overlay = document.getElementById('game-over-overlay');
-    if (overlay && currentRoomData) {
+    if (overlay) {
       const rematchBtn = overlay.querySelector('#rematch-btn');
       if (rematchBtn) {
         const myId = api.getUser()?.id;
-        const votes = data.votes || [];
-        const hasVoted = votes.includes(myId) || rematchBtn.classList.contains('btn-secondary');
+        const votes = data.votedPlayers || data.votes || [];
+        const hasVoted = (myId && votes.includes(myId)) || rematchBtn.classList.contains('btn-secondary');
         const count = data.votedCount !== undefined ? data.votedCount : votes.length;
-        const total = data.totalNeeded || currentRoomData.players.length;
+        const total = data.totalNeeded || currentRoomData?.players?.length || 2;
         rematchBtn.textContent = hasVoted
           ? `⏳ في انتظار بقية اللاعبين (${count} / ${total})`
-          : `🔄 إعادة المباراة (${count} / ${total})`;
+          : `🔄 طلب إعادة المباراة (${count} / ${total})`;
         if (hasVoted) {
           rematchBtn.disabled = true;
           rematchBtn.classList.add('btn-secondary');
           rematchBtn.classList.remove('btn-primary');
+        } else {
+          rematchBtn.disabled = false;
+          rematchBtn.classList.remove('btn-secondary');
+          rematchBtn.classList.add('btn-primary');
         }
       }
     }
@@ -560,6 +564,8 @@ function showRoundEndOverlay(room, game, isHost, myId) {
     overlay.id = 'round-end-overlay';
     overlay.className = 'modal-backdrop active';
     document.body.appendChild(overlay);
+  } else {
+    overlay.classList.add('active');
   }
 
   const roundNum = game.round || game.roundNumber || 1;
@@ -568,40 +574,34 @@ function showRoundEndOverlay(room, game, isHost, myId) {
   const points = game.roundPointsAwarded || 0;
 
   overlay.innerHTML = `
-    <div class="modal-box text-center" style="text-align: center; padding: 2rem; max-width: 440px;">
-      <h3 style="color: var(--accent); margin-bottom: 0.5rem;">🎉 نهاية الجولة ${roundNum}</h3>
-      ${winner ? `<p style="font-size: 1.15rem; font-weight: 700; margin: 0.75rem 0;">الفائز بالجولة: <strong style="color: #10b981;">${escapeHtml(winner)}</strong></p>` : ''}
-      ${points > 0 ? `<p style="color: var(--text-muted); font-size: 0.95rem;">النقاط المحتسبة: <strong>+${points}</strong></p>` : ''}
-      ${reason ? `<p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">${escapeHtml(reason)}</p>` : ''}
+    <div class="modal-box round-end-modal" id="round-end-modal-box">
+      <div class="round-modal-body">
+        <div class="winner-celebration-emoji">🎉</div>
+        <h3 class="winner-title" style="color: var(--accent);">نهاية الجولة ${roundNum}</h3>
+        ${winner ? `
+          <div class="winner-announcement-box" style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981;">
+            <p class="winner-banner-text" style="color: #10b981;">الفائز بالجولة: ${escapeHtml(winner)}</p>
+          </div>
+        ` : ''}
+        ${points > 0 ? `<p style="color: var(--text-muted); font-size: 0.95rem; margin: 0.4rem 0;">النقاط المحتسبة: <strong style="color: var(--text-color);">+${points}</strong></p>` : ''}
+        ${reason ? `<div class="winner-reason-badge"><span style="color: var(--text-muted);">السبب:</span> <strong>${escapeHtml(reason)}</strong></div>` : ''}
+      </div>
 
-      <div style="margin-top: 1.5rem; display: flex; justify-content: center; gap: 1rem;">
+      <div class="round-modal-footer">
         ${isHost ? `
-          <button id="next-round-btn" class="btn btn-primary btn-lg" style="box-shadow: 0 0 16px rgba(6, 182, 212, 0.6);">
+          <button id="next-round-btn" class="btn btn-primary btn-lg winner-action-btn" style="box-shadow: 0 0 16px rgba(6, 182, 212, 0.6);">
             ▶ الجولة التالية
           </button>
         ` : `
-          <div class="turn-status-banner">🕒 في انتظار المضيف لبدء الجولة التالية...</div>
-        `}
-      </div>
-    </div>
-  `;
-
-  const nextBtn = overlay.querySelector('#next-round-btn');
-  if (nextBtn) {
-    nextBtn.addEventListener('click', () => {
-      sfx.click();
-      socket.nextRound(room.id);
-    });
-  }
-}
-
-function showGameOverOverlay(room, game, isHost, myId) {
+  function showGameOverOverlay(room, game, isHost, myId) {
   let overlay = document.getElementById('game-over-overlay');
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'game-over-overlay';
     overlay.className = 'modal-backdrop active';
     document.body.appendChild(overlay);
+  } else {
+    overlay.classList.add('active');
   }
 
   const user = api.getUser() || {};
@@ -642,20 +642,20 @@ function showGameOverOverlay(room, game, isHost, myId) {
 
   // Rematch consensus state
   const rematchVotes = room.rematchVotes || [];
-  const rematchNeeded = room.rematchNeeded || room.players.length;
+  const rematchNeeded = room.rematchNeeded || room.players?.length || 2;
   const hasVotedRematch = rematchVotes.includes(currentUserId);
 
   // Scores breakdown
   let scoresHtml = '';
   if (game?.scores && Object.keys(game.scores).length > 0) {
     scoresHtml = `
-      <div style="margin: 1.25rem 0; padding: 0.75rem; background: rgba(0,0,0,0.25); border-radius: 8px;">
-        <h4 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">النقاط النهائية (Final Scores)</h4>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8rem;">
+      <div class="winner-scores-box">
+        <h4 class="winner-scores-title">النقاط النهائية (Final Scores)</h4>
+        <div class="winner-scores-grid">
           ${Object.entries(game.scores).map(([player, score]) => `
-            <div style="padding: 0.4rem 0.85rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;">
-              <span style="font-size: 0.9rem;">${escapeHtml(player)}:</span>
-              <strong style="color: var(--accent); margin-inline-start: 4px;">${score}</strong>
+            <div class="winner-score-pill">
+              <span>${escapeHtml(player)}:</span>
+              <strong style="color: var(--accent); margin-inline-start: 6px;">${score}</strong>
             </div>
           `).join('')}
         </div>
@@ -668,70 +668,72 @@ function showGameOverOverlay(room, game, isHost, myId) {
 
   if (isDraw) {
     statusHeader = `
-      <h1 style="font-size: 3.2rem; margin-bottom: 0.25rem;">🤝</h1>
-      <h2 style="font-size: 1.6rem; margin-bottom: 0.5rem; color: #f59e0b; font-weight: 800;">انتهت المباراة بالتعادل (DRAW)</h2>
-    `;
-    statusBanner = `<p style="font-size: 1.15rem; font-weight: 700; color: #f59e0b; margin: 0.5rem 0;">تعادل الفريقان / اللاعبان</p>`;
-  } else if (amWinner) {
-    statusHeader = `
-      <h1 style="font-size: 3.2rem; margin-bottom: 0.25rem;">🎉</h1>
-      <h2 style="font-size: 1.6rem; margin-bottom: 0.5rem; color: #10b981; font-weight: 800;">مبروك! لقد فزت بالمباراة! (VICTORY)</h2>
+      <div class="winner-celebration-emoji">🤝</div>
+      <h2 class="winner-title" style="color: #f59e0b;">انتهت المباراة بالتعادل (DRAW)</h2>
     `;
     statusBanner = `
-      <div class="winner-announcement-box" style="margin: 0.8rem 0; padding: 0.75rem; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; border-radius: 8px;">
-        <p style="font-size: 1.3rem; font-weight: 800; color: #10b981; margin: 0.25rem 0;">
-          🏆 أنت الفائز باللقاء!
-        </p>
+      <div class="winner-announcement-box" style="background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b;">
+        <p class="winner-banner-text" style="color: #f59e0b;">تعادل الفريقان / اللاعبان</p>
+      </div>
+    `;
+  } else if (amWinner) {
+    statusHeader = `
+      <div class="winner-celebration-emoji">🎉</div>
+      <h2 class="winner-title" style="color: #10b981;">مبروك! لقد فزت بالمباراة! (VICTORY)</h2>
+    `;
+    statusBanner = `
+      <div class="winner-announcement-box" style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981;">
+        <p class="winner-banner-text" style="color: #10b981;">🏆 أنت الفائز باللقاء!</p>
         ${loser ? `<p style="font-size: 0.95rem; color: var(--text-muted); margin: 0.2rem 0;">الخاسر: ${escapeHtml(loser)}</p>` : ''}
       </div>
     `;
   } else if (amLoser) {
     statusHeader = `
-      <h1 style="font-size: 3.2rem; margin-bottom: 0.25rem;">💔</h1>
-      <h2 style="font-size: 1.6rem; margin-bottom: 0.5rem; color: #ef4444; font-weight: 800;">حظاً أوفر في المرة القادمة (DEFEAT)</h2>
+      <div class="winner-celebration-emoji">💔</div>
+      <h2 class="winner-title" style="color: #ef4444;">حظاً أوفر في المرة القادمة (DEFEAT)</h2>
     `;
     statusBanner = `
-      <div class="winner-announcement-box" style="margin: 0.8rem 0; padding: 0.75rem; background: rgba(239, 68, 68, 0.12); border: 1px solid #ef4444; border-radius: 8px;">
-        <p style="font-size: 1.2rem; font-weight: 800; color: #ef4444; margin: 0.25rem 0;">
-          خسارة المباراة
-        </p>
+      <div class="winner-announcement-box" style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444;">
+        <p class="winner-banner-text" style="color: #ef4444;">خسارة المباراة</p>
         ${winner ? `<p style="font-size: 1rem; color: #10b981; font-weight: 700; margin: 0.2rem 0;">الفائز: ${escapeHtml(winner)}</p>` : ''}
       </div>
     `;
   } else {
     // Spectator view
     statusHeader = `
-      <h1 style="font-size: 3.2rem; margin-bottom: 0.25rem;">🏆</h1>
-      <h2 style="font-size: 1.6rem; margin-bottom: 0.5rem; letter-spacing: 0.5px;">نهاية المباراة (GAME OVER)</h2>
+      <div class="winner-celebration-emoji">🏆</div>
+      <h2 class="winner-title">نهاية المباراة (GAME OVER)</h2>
     `;
     statusBanner = `
-      <div class="winner-announcement-box" style="margin: 0.8rem 0;">
-        ${winner ? `<p style="font-size: 1.3rem; font-weight: 800; color: #10b981; margin: 0.25rem 0;">🏆 الفائز: ${escapeHtml(winner)}</p>` : ''}
-        ${loser ? `<p style="font-size: 1rem; font-weight: 600; color: #f87171; margin: 0.25rem 0;">الخاسر: ${escapeHtml(loser)}</p>` : ''}
+      <div class="winner-announcement-box" style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12);">
+        ${winner ? `<p class="winner-banner-text" style="color: #10b981;">🏆 الفائز: ${escapeHtml(winner)}</p>` : ''}
+        ${loser ? `<p style="font-size: 1rem; font-weight: 600; color: #f87171; margin: 0.2rem 0;">الخاسر: ${escapeHtml(loser)}</p>` : ''}
       </div>
     `;
   }
 
   overlay.innerHTML = `
-    <div class="modal-box text-center winner-fanfare-modal" style="text-align: center; padding: 2.2rem; max-width: 490px;">
-      ${statusHeader}
-      ${statusBanner}
+    <div class="modal-box winner-fanfare-modal" id="winner-fanfare-modal-box">
+      <div class="winner-modal-body">
+        ${statusHeader}
+        ${statusBanner}
 
-      ${reason ? `
-        <div style="margin: 0.5rem 0; padding: 0.35rem 0.75rem; background: rgba(255,255,255,0.06); border-radius: 6px; display: inline-block;">
-          <span style="color: var(--text-muted); font-size: 0.85rem;">سبب النهاية: </span>
-          <strong style="color: var(--text-color); font-size: 0.85rem;">${escapeHtml(reason)}</strong>
-        </div>
-      ` : ''}
+        ${reason ? `
+          <div class="winner-reason-badge">
+            <span style="color: var(--text-muted);">سبب النهاية: </span>
+            <strong style="color: var(--text-color); margin-inline-start: 4px;">${escapeHtml(reason)}</strong>
+          </div>
+        ` : ''}
 
-      ${scoresHtml}
+        ${scoresHtml}
+      </div>
 
-      <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; align-items: center;">
-        <button id="rematch-btn" class="btn ${hasVotedRematch ? 'btn-secondary' : 'btn-primary'} btn-lg" style="width: 100%; max-width: 320px;" ${hasVotedRematch ? 'disabled' : ''}>
+      <div class="winner-modal-footer">
+        <button id="rematch-btn" class="btn ${hasVotedRematch ? 'btn-secondary' : 'btn-primary'} btn-lg winner-action-btn" ${hasVotedRematch ? 'disabled' : ''}>
           ${hasVotedRematch ? `⏳ في انتظار بقية اللاعبين (${rematchVotes.length} / ${rematchNeeded})` : `🔄 طلب إعادة المباراة (${rematchVotes.length} / ${rematchNeeded})`}
         </button>
 
-        <button id="exit-to-lobby-btn" class="btn btn-outline" style="width: 100%; max-width: 320px;">
+        <button id="exit-to-lobby-btn" class="btn btn-outline winner-action-btn">
           🚪 العودة إلى صالة الألعاب
         </button>
       </div>
@@ -740,7 +742,15 @@ function showGameOverOverlay(room, game, isHost, myId) {
 
   const rematchBtn = overlay.querySelector('#rematch-btn');
   if (rematchBtn && !hasVotedRematch) {
-    rematchBtn.addEventListener('click', () => {
+    let rematchVoting = false;
+    rematchBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (rematchVoting || rematchBtn.disabled) return;
+      rematchVoting = true;
+      rematchBtn.disabled = true;
+      rematchBtn.classList.add('btn-secondary');
+      rematchBtn.classList.remove('btn-primary');
+      rematchBtn.textContent = '⏳ جاري إرسال الطلب...';
       sfx.click();
       socket.voteRematch(room.id);
     });
@@ -748,7 +758,26 @@ function showGameOverOverlay(room, game, isHost, myId) {
 
   const exitBtn = overlay.querySelector('#exit-to-lobby-btn');
   if (exitBtn) {
-    exitBtn.addEventListener('click', () => {
+    let exitTriggered = false;
+    exitBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (exitTriggered) return;
+      exitTriggered = true;
+      exitBtn.disabled = true;
+
+      // Clean up game timers and listeners
+      if (currentGameClient && typeof currentGameClient.destroy === 'function') {
+        try {
+          currentGameClient.destroy();
+        } catch (err) {
+          console.warn('[Room] Error destroying game client on exit:', err);
+        }
+      }
+      if (roomLoadTimeout) {
+        clearTimeout(roomLoadTimeout);
+        roomLoadTimeout = null;
+      }
+
       overlay.remove();
       socket.leaveRoom(room.id);
       window.location.href = '/lobby.html';
@@ -865,6 +894,9 @@ function setupRoomDomListeners() {
     leaveBtn.addEventListener('click', () => {
       const confirmText = i18n.getLanguage() === 'ar' ? 'هل أنت متأكد من مغادرة الغرفة؟' : 'Are you sure you want to leave the room?';
       if (confirm(confirmText)) {
+        if (currentGameClient && typeof currentGameClient.destroy === 'function') {
+          try { currentGameClient.destroy(); } catch (err) {}
+        }
         if (roomLoadTimeout) {
           clearTimeout(roomLoadTimeout);
           roomLoadTimeout = null;
@@ -877,6 +909,9 @@ function setupRoomDomListeners() {
 
   // Cleanup on page unload
   window.addEventListener('beforeunload', () => {
+    if (currentGameClient && typeof currentGameClient.destroy === 'function') {
+      try { currentGameClient.destroy(); } catch (err) {}
+    }
     if (roomLoadTimeout) {
       clearTimeout(roomLoadTimeout);
     }

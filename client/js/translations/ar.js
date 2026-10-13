@@ -7,6 +7,7 @@ export const ar = {
   brandSubtitle: "العب مع الأصدقاء أونلاين",
   navHome: "الرئيسية",
   navLobby: "صالة الألعاب",
+  navStore: "المتجر",
   navProfile: "الملف الشخصي",
   navSettings: "الإعدادات",
   navLogin: "تسجيل الدخول",

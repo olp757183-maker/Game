@@ -241,6 +241,10 @@ app.post('/api/rooms/:idOrCode/join', auth.middleware, (req, res) => {
 });
 
 // Fallback to client SPA / direct HTML
+app.get('/store', (req, res) => {
+  res.sendFile(path.join(CLIENT_DIR, 'store.html'));
+});
+
 app.get('/room/:idOrCode', (req, res) => {
   res.sendFile(path.join(CLIENT_DIR, 'room.html'));
 });

@@ -7,6 +7,7 @@ export const en = {
   brandSubtitle: "Play With Friends Online",
   navHome: "Home",
   navLobby: "Lobby",
+  navStore: "Store",
   navProfile: "Profile",
   navSettings: "Settings",
   navLogin: "Login",

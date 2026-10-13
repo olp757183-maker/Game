@@ -46,6 +46,20 @@ export function getIO() {
   return ioInstance;
 }
 
+export function disconnectBannedUser(userId, reason = 'Account banned') {
+  const sockets = userSockets.get(userId);
+  if (sockets && sockets.size > 0 && ioInstance) {
+    for (const socketId of sockets) {
+      const socket = ioInstance.sockets?.sockets?.get(socketId);
+      if (socket) {
+        socket.emit('user:banned', { reason });
+        socket.disconnect(true);
+      }
+    }
+    userSockets.delete(userId);
+  }
+}
+
 /**
  * Broadcast full room and game state to each participant securely
  */
@@ -519,6 +533,12 @@ export function setupSocketServer(httpServer) {
     socket.on('player:skin:update', async ({ gameType, skin }) => {
       try {
         console.log(`[SKIN UPDATE] user=${user.username} gameType=${gameType} skin=${skin}`);
+        if (skin && skin !== 'default') {
+          const owned = database.hasUserSkin(user.id, skin);
+          if (!owned) {
+            return socket.emit(SOCKET_EVENTS.ERROR, { messageEn: 'Skin not owned', messageAr: 'أنت لا تملك هذا السكن' });
+          }
+        }
         // Save to DB
         const profile = users.getUserProfile(user.id);
         const prefs = profile.preferences || {};

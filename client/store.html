@@ -3,9 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="متجر سكنات ألعاب أونو، شطرنج، ودومينو — Classic Games">
   <title>Store — Classic Games</title>
+
   <link rel="stylesheet" href="./css/main.css">
   <link rel="stylesheet" href="./css/responsive.css">
+  <link rel="stylesheet" href="./css/store.css">
 </head>
 <body>
   <!-- Header -->
@@ -36,14 +39,76 @@
     </div>
   </header>
 
-  <!-- Empty Store Main Area -->
-  <main class="store-container" style="flex: 1; min-height: 60vh;"></main>
+  <!-- Main Store Area -->
+  <main class="store-container store-page-wrap">
+    <!-- Store Hero Banner -->
+    <div class="store-hero">
+      <div class="store-title-wrap">
+        <h1>🛍️ متجر سكنات الألعاب</h1>
+        <p class="store-subtitle">استبدل نقاط فوزك في الألعاب بسكنات حصرية وبصرية لأونو، الشطرنج، والدومينو</p>
+      </div>
 
-  <script type="module">
-    import ui from './js/ui.js';
-    document.addEventListener('DOMContentLoaded', () => {
-      ui.setupGlobalNav();
-    });
-  </script>
+      <div class="store-balance-badge">
+        <span class="balance-icon">⭐</span>
+        <div>
+          <div class="balance-label">رصيد نقاطك الحالي</div>
+          <div class="balance-amount" id="user-points-balance">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Filters -->
+    <div class="store-filters">
+      <button class="store-filter-btn active" data-filter="all">🌟 جميع السكنات</button>
+      <button class="store-filter-btn" data-filter="uno">🃏 أونو (UNO)</button>
+      <button class="store-filter-btn" data-filter="chess">♟️ الشطرنج (Chess)</button>
+      <button class="store-filter-btn" data-filter="domino">🁢 الدومينو (Domino)</button>
+      <button class="store-filter-btn" data-filter="owned">🎒 سكناتي المملوكة</button>
+    </div>
+
+    <!-- Store Skins Grid -->
+    <div class="store-skins-grid" id="store-skins-container">
+      <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-muted);">
+        جاري تحميل المتجر...
+      </div>
+    </div>
+  </main>
+
+  <!-- Purchase Confirmation Modal -->
+  <div class="store-modal-backdrop" id="modal-purchase-skin">
+    <div class="store-modal-box">
+      <div class="store-modal-header">
+        <h3 style="font-weight: 800; font-size: 1.15rem;">🛍️ تأكيد شراء السكن</h3>
+        <button class="icon-btn modal-close-btn" id="close-purchase-modal">✕</button>
+      </div>
+      <div class="store-modal-body">
+        <p style="font-size: 1.1rem;">هل ترغب في شراء السكن: <strong id="purchase-skin-name" style="color: var(--accent);">--</strong>؟</p>
+        <div style="background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem; text-align: right; line-height: 1.8;">
+          <div style="display: flex; justify-content: space-between;">
+            <span>سعر السكن:</span>
+            <strong id="purchase-skin-price" style="color: var(--warning);">--</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>رصيدك الحالي:</span>
+            <span id="purchase-current-balance">0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border); margin-top: 0.5rem; padding-top: 0.5rem; font-weight: 800;">
+            <span>الرصيد المتبقي بعد الشراء:</span>
+            <span id="purchase-after-balance" style="color: var(--success);">0</span>
+          </div>
+        </div>
+      </div>
+      <div class="store-modal-footer">
+        <button class="btn btn-outline modal-close-btn" id="cancel-purchase-btn">إلغاء</button>
+        <button class="btn btn-primary" id="confirm-purchase-btn">تأكيد الخصم والشراء</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <p>© 2026 Classic Games Online — Game Store</p>
+  </footer>
+
+  <script type="module" src="./js/store.js"></script>
 </body>
 </html>

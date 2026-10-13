@@ -113,12 +113,15 @@ class UIManager {
 
     const user = api.getUser();
     if (user) {
+      const isAdmin = user.role === 'super_admin' || user.role === 'sub_admin';
       userContainer.innerHTML = `
         <div class="user-pill">
           <div class="avatar-badge ${user.avatar || 'avatar1'}"></div>
           <span class="user-name">${user.username}</span>
+          ${isAdmin ? `<span class="badge ${user.role === 'super_admin' ? 'badge-primary' : 'badge-info'}" style="font-size: 0.72rem;">${user.role === 'super_admin' ? '👑 Super Admin' : '🛡️ Admin'}</span>` : ''}
           ${user.isGuest ? '<span class="badge badge-guest">Guest</span>' : ''}
         </div>
+        ${isAdmin ? `<a href="/admin.html" id="header-admin-link" class="btn btn-sm btn-primary" style="background: linear-gradient(135deg, #e53e3e, #b83280); border: none; font-weight: bold;">🛡️ الإدارة</a>` : ''}
         <button id="logout-btn" class="btn btn-sm btn-outline" data-i18n="navLogout">${i18n.t('navLogout')}</button>
       `;
       const logoutBtn = document.getElementById('logout-btn');

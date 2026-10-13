@@ -163,6 +163,124 @@ class ApiService {
       method: 'POST'
     });
   }
+
+  // ==========================================
+  // Store Client Methods
+  // ==========================================
+  async getStoreSkins(gameType = null) {
+    const q = gameType ? `?gameType=${encodeURIComponent(gameType)}` : '';
+    const res = await this.request(`/store/skins${q}`);
+    return res.skins;
+  }
+
+  async getMySkins(gameType = null) {
+    const q = gameType ? `?gameType=${encodeURIComponent(gameType)}` : '';
+    const res = await this.request(`/store/my-skins${q}`);
+    return res.skins;
+  }
+
+  async buySkin(skinId) {
+    return this.request(`/store/buy/${skinId}`, {
+      method: 'POST'
+    });
+  }
+
+  async equipSkin(gameType, skinId) {
+    return this.request('/store/equip', {
+      method: 'POST',
+      body: JSON.stringify({ gameType, skinId })
+    });
+  }
+
+  async getTransactions(limit = 50) {
+    const res = await this.request(`/store/transactions?limit=${limit}`);
+    return res.transactions;
+  }
+
+  // ==========================================
+  // Admin Client Methods
+  // ==========================================
+  async getAdminUsers({ search = '', role = '', isBanned = '', limit = 100, offset = 0 } = {}) {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (role) params.append('role', role);
+    if (isBanned !== '') params.append('isBanned', isBanned);
+    params.append('limit', limit);
+    params.append('offset', offset);
+    return this.request(`/admin/users?${params.toString()}`);
+  }
+
+  async banUser(userId, reason) {
+    return this.request(`/admin/users/${userId}/ban`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
+  }
+
+  async unbanUser(userId) {
+    return this.request(`/admin/users/${userId}/unban`, {
+      method: 'POST'
+    });
+  }
+
+  async deleteUser(userId) {
+    return this.request(`/admin/users/${userId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async getSubAdmins() {
+    return this.request('/admin/sub-admins');
+  }
+
+  async promoteSubAdmin(userId, permissions = []) {
+    return this.request(`/admin/sub-admins/${userId}/promote`, {
+      method: 'POST',
+      body: JSON.stringify({ permissions })
+    });
+  }
+
+  async updateSubAdminPermissions(userId, permissions = []) {
+    return this.request(`/admin/sub-admins/${userId}/permissions`, {
+      method: 'PUT',
+      body: JSON.stringify({ permissions })
+    });
+  }
+
+  async demoteSubAdmin(userId) {
+    return this.request(`/admin/sub-admins/${userId}/demote`, {
+      method: 'POST'
+    });
+  }
+
+  async getAdminAuditLogs({ limit = 100, offset = 0 } = {}) {
+    return this.request(`/admin/audit-logs?limit=${limit}&offset=${offset}`);
+  }
+
+  async getAdminSkins() {
+    const res = await this.request('/admin/skins');
+    return res.skins;
+  }
+
+  async createAdminSkin(data) {
+    return this.request('/admin/skins', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updateAdminSkin(skinId, data) {
+    return this.request(`/admin/skins/${skinId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteAdminSkin(skinId) {
+    return this.request(`/admin/skins/${skinId}`, {
+      method: 'DELETE'
+    });
+  }
 }
 
 export const api = new ApiService();

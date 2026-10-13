@@ -279,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const password = document.getElementById('password')?.value;
 
       try {
-        await api.login({ identifier, password });
+        const res = await api.login({ identifier, password });
         sfx.click();
         showToast(i18n.t('loginSuccess'), 'success');
         setTimeout(() => {
@@ -287,6 +287,8 @@ document.addEventListener('DOMContentLoaded', () => {
           const redirect = urlParams.get('redirect');
           if (redirect && redirect.startsWith('/')) {
             window.location.href = redirect;
+          } else if (res?.user?.role === 'super_admin' || res?.user?.role === 'sub_admin') {
+            window.location.href = '/admin.html';
           } else {
             window.location.href = '/lobby.html';
           }

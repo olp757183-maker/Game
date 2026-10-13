@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Admin Control Panel — Classic Games Online">
+  <title>Admin Dashboard — Classic Games</title>
+
+  <link rel="stylesheet" href="./css/main.css">
+  <link rel="stylesheet" href="./css/responsive.css">
+  <link rel="stylesheet" href="./css/admin.css">
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <a href="./index.html" class="brand-link">
+          <span class="brand-icon">🎮</span>
+          <span class="brand-title">Classic Games</span>
+        </a>
+      </div>
+
+      <nav class="site-nav">
+        <button id="mobile-menu-toggle" class="mobile-menu-btn" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+        <ul id="site-nav-links" class="nav-links">
+          <li><a href="./index.html" class="nav-link" data-i18n="navHome">الرئيسية</a></li>
+          <li><a href="./lobby.html" class="nav-link" data-i18n="navLobby">الغرف</a></li>
+          <li><a href="./store.html" class="nav-link" id="nav-store-link" data-i18n="navStore">المتجر</a></li>
+          <li><a href="./profile.html" class="nav-link" data-i18n="navProfile">الملف الشخصي</a></li>
+          <li><a href="./settings.html" class="nav-link" data-i18n="navSettings">الإعدادات</a></li>
+          <li><a href="./admin.html" class="nav-link active" id="nav-admin-link">🛡️ الإدارة</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <a href="./store.html" id="header-store-btn" class="icon-btn store-icon-btn" title="المتجر (Store)" aria-label="المتجر" style="text-decoration: none;">
+          🛒
+        </a>
+        <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme" aria-label="Toggle Theme">☀️</button>
+        <button id="lang-toggle-btn" class="icon-btn" title="تغيير اللغة" aria-label="Toggle Language">English</button>
+        <button id="sound-toggle-btn" class="icon-btn" title="كتم / تشغيل الصوت" aria-label="Toggle Sound">🔊</button>
+        <div id="header-user-actions" class="user-actions-wrap"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Admin Layout -->
+  <main class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <div class="admin-profile-card">
+        <div class="admin-profile-avatar avatar1" id="admin-sidebar-avatar"></div>
+        <div class="admin-profile-name" id="admin-sidebar-username">Admin</div>
+        <div class="admin-role-badge admin-role-super" id="admin-sidebar-role">Super Admin</div>
+      </div>
+
+      <nav class="admin-nav-list" role="tablist">
+        <button class="admin-nav-item active" data-target="section-overview" id="tab-overview">
+          <span class="nav-icon">📊</span>
+          <span>نظرة عامة (Overview)</span>
+        </button>
+        <button class="admin-nav-item" data-target="section-users" id="tab-users">
+          <span class="nav-icon">👥</span>
+          <span>إدارة الحسابات (Users)</span>
+        </button>
+        <button class="admin-nav-item" data-target="section-subadmins" id="tab-subadmins">
+          <span class="nav-icon">🛡️</span>
+          <span>المديرون الفرعيون (Sub-Admins)</span>
+        </button>
+        <button class="admin-nav-item" data-target="section-skins" id="tab-skins">
+          <span class="nav-icon">🎨</span>
+          <span>سكنات الألعاب (Skins Store)</span>
+        </button>
+        <button class="admin-nav-item" data-target="section-audit" id="tab-audit">
+          <span class="nav-icon">📜</span>
+          <span>سجل التدقيق (Audit Log)</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- Main Content Area -->
+    <section class="admin-content">
+      <!-- 1. Overview Section -->
+      <div class="admin-section active" id="section-overview">
+        <div class="section-header">
+          <h1 class="section-title">📊 لوحة التحكم الإدارية</h1>
+          <span class="badge badge-info" id="admin-live-badge">🟢 متصل بالخادم</span>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-title">إجمالي الحسابات المسجلة</div>
+            <div class="stat-value" id="stat-total-users">--</div>
+            <div class="stat-desc">مستخدمون حقيقيون في قاعدة البيانات</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">الحسابات المحظورة</div>
+            <div class="stat-value" id="stat-banned-users" style="color: var(--danger);">--</div>
+            <div class="stat-desc">ممنوعون من الدخول والغرف فورياً</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">المديرون الفرعيون</div>
+            <div class="stat-value" id="stat-subadmins" style="color: var(--accent);">--</div>
+            <div class="stat-desc">بصلاحيات دقيقة مخصصة</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">سكنات الألعاب بالمتجر</div>
+            <div class="stat-value" id="stat-total-skins" style="color: var(--warning);">--</div>
+            <div class="stat-desc">أونو • شطرنج • دومينو بالنقاط</div>
+          </div>
+        </div>
+
+        <div style="background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
+          <h3 style="margin-bottom: 0.75rem; font-weight: 700;">📌 قواعد الأمان والصلاحيات المركزية</h3>
+          <ul style="color: var(--text-muted); line-height: 1.8; padding-right: 1.25rem;">
+            <li>حساب المدير الرئيسي <strong>Madara</strong> يمتلك كافة الصلاحيات بشكل قطعي في الخادم.</li>
+            <li>المدير الفرعي يحصل على صلاحيات محددة فقط؛ أي عملية غير ممنوحة تُرفض في الخادم تلقائياً.</li>
+            <li>الحظر يبطل الجلسات النشطة ويقطع اتصال Socket.IO ويمنع دخول الغرف والمباريات في التو واللحظة.</li>
+            <li>متجر السكنات مدمج مع نظام نقاط الفوز في الألعاب، وعمليات الشراء ذرية ومحمية من التكرار.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 2. Users Management Section -->
+      <div class="admin-section" id="section-users">
+        <div class="section-header">
+          <h2 class="section-title">👥 إدارة الحسابات والمستخدمين</h2>
+          <button class="btn btn-outline btn-sm" id="btn-refresh-users">🔄 تحديث القائمة</button>
+        </div>
+
+        <div class="toolbar-bar">
+          <div class="search-input-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="user-search-input" class="form-control" placeholder="ابحث بالاسم أو البريد أو المعرف...">
+          </div>
+          <select id="user-role-filter" class="form-control" style="width: 150px;">
+            <option value="">كل الأدوار</option>
+            <option value="user">مستخدم عادي</option>
+            <option value="sub_admin">مدير فرعي</option>
+            <option value="super_admin">المدير الرئيسي</option>
+          </select>
+          <select id="user-ban-filter" class="form-control" style="width: 150px;">
+            <option value="">كل الحالات</option>
+            <option value="false">نشط فقط</option>
+            <option value="true">محظور فقط</option>
+          </select>
+        </div>
+
+        <div class="table-responsive">
+          <table class="admin-table" id="users-table">
+            <thead>
+              <tr>
+                <th>المستخدم</th>
+                <th>الدور</th>
+                <th>النقاط</th>
+                <th>الحالة</th>
+                <th>تاريخ التسجيل</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody">
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 2rem;">جاري تحميل الحسابات...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 3. Sub-Admins Management Section -->
+      <div class="admin-section" id="section-subadmins">
+        <div class="section-header">
+          <h2 class="section-title">🛡️ إدارة المديرين الفرعيين والصلاحيات</h2>
+          <button class="btn btn-primary btn-sm" id="btn-open-promote-modal">➕ ترقية مستخدم لمدير فرعي</button>
+        </div>
+
+        <div id="subadmins-container" class="subadmins-grid">
+          <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);">
+            جاري فحص المديرين الفرعيين...
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Game Skins Store Management Section -->
+      <div class="admin-section" id="section-skins">
+        <div class="section-header">
+          <h2 class="section-title">🎨 إدارة سكنات الألعاب والمتجر</h2>
+          <button class="btn btn-primary btn-sm" id="btn-open-skin-modal">➕ إضافة سكن جديد</button>
+        </div>
+
+        <div class="toolbar-bar">
+          <select id="skin-game-filter" class="form-control" style="width: 160px;">
+            <option value="">كل الألعاب</option>
+            <option value="uno">أونو (UNO)</option>
+            <option value="chess">شطرنج (Chess)</option>
+            <option value="domino">دومينو (Domino)</option>
+          </select>
+        </div>
+
+        <div id="skins-admin-container" class="skins-admin-grid">
+          <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);">
+            جاري تحميل السكنات...
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Audit Log Section -->
+      <div class="admin-section" id="section-audit">
+        <div class="section-header">
+          <h2 class="section-title">📜 سجل العمليات الإدارية (Audit Log)</h2>
+          <button class="btn btn-outline btn-sm" id="btn-refresh-audit">🔄 تحديث السجل</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="admin-table" id="audit-table">
+            <thead>
+              <tr>
+                <th>التاريخ والوقت</th>
+                <th>المنفّذ</th>
+                <th>نوع العملية</th>
+                <th>الهدف</th>
+                <th>التفاصيل</th>
+              </tr>
+            </thead>
+            <tbody id="audit-tbody">
+              <tr>
+                <td colspan="5" style="text-align: center; padding: 2rem;">جاري تحميل سجل التدقيق...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODALS -->
+
+  <!-- 1. Ban User Modal -->
+  <div class="admin-modal-backdrop" id="modal-ban-user">
+    <div class="admin-modal-box">
+      <div class="admin-modal-header">
+        <h3 style="color: var(--danger);">🚫 حظر حساب المستخدم</h3>
+        <button class="icon-btn modal-close-btn" id="close-ban-modal">✕</button>
+      </div>
+      <div class="admin-modal-body">
+        <p>أنت على وشك حظر المستخدم: <strong id="ban-target-username">--</strong></p>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          سيتم فورياً إبطال جلسة المستخدم وقطع اتصاله بالخادم ومنعه من دخول أو إنشاء أي غرف لعب جماعي.
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="ban-reason-input">سبب الحظر:</label>
+          <input type="text" id="ban-reason-input" class="form-control" placeholder="مخالفة قواعد المنصة أو اللعب غير النظيف">
+        </div>
+      </div>
+      <div class="admin-modal-footer">
+        <button class="btn btn-outline modal-close-btn" id="cancel-ban-btn">إلغاء</button>
+        <button class="btn btn-danger" id="confirm-ban-btn">تأكيد الحظر الفوري</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Delete User Modal -->
+  <div class="admin-modal-backdrop" id="modal-delete-user">
+    <div class="admin-modal-box">
+      <div class="admin-modal-header">
+        <h3 style="color: var(--danger);">⚠️ حذف حساب المستخدم نهائياً</h3>
+        <button class="icon-btn modal-close-btn" id="close-delete-modal">✕</button>
+      </div>
+      <div class="admin-modal-body">
+        <p>هل أنت متأكد من رغبتك في حذف الحساب: <strong id="delete-target-username">--</strong>؟</p>
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); padding: 0.75rem; border-radius: var(--radius-md); font-size: 0.85rem; color: var(--danger);">
+          ⚠️ تحذير: هذه العملية نهائية ولا يمكن التراجع عنها. سيتم تنظيف بيانات الحساب دون الإخلال بسجلات المباريات المشتركة للاعبين الآخرين.
+        </div>
+      </div>
+      <div class="admin-modal-footer">
+        <button class="btn btn-outline modal-close-btn" id="cancel-delete-btn">إلغاء</button>
+        <button class="btn btn-danger" id="confirm-delete-btn">نعم، احذف الحساب</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Skin Create/Edit Modal -->
+  <div class="admin-modal-backdrop" id="modal-skin-editor">
+    <div class="admin-modal-box">
+      <div class="admin-modal-header">
+        <h3 id="skin-modal-title">🎨 إضافة سكن جديد</h3>
+        <button class="icon-btn modal-close-btn" id="close-skin-modal">✕</button>
+      </div>
+      <div class="admin-modal-body">
+        <input type="hidden" id="skin-id-input">
+        <div class="form-group">
+          <label class="form-label" for="skin-game-input">اللعبة المدعومة:</label>
+          <select id="skin-game-input" class="form-control" required>
+            <option value="uno">أونو (UNO)</option>
+            <option value="chess">شطرنج (Chess)</option>
+            <option value="domino">دومينو (Domino)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="skin-name-input">اسم السكن:</label>
+          <input type="text" id="skin-name-input" class="form-control" required placeholder="مثال: نيون متوهج">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="skin-desc-input">الوصف:</label>
+          <textarea id="skin-desc-input" class="form-control" rows="2" placeholder="وصف المظهر والتأثيرات"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="skin-price-input">السعر بالنقاط:</label>
+          <input type="number" id="skin-price-input" class="form-control" min="0" value="20" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="skin-status-input">حالة النشر:</label>
+          <select id="skin-status-input" class="form-control">
+            <option value="published">منشور بالمتجر (Published)</option>
+            <option value="draft">مسودة مخفية (Draft)</option>
+          </select>
+        </div>
+      </div>
+      <div class="admin-modal-footer">
+        <button class="btn btn-outline modal-close-btn" id="cancel-skin-btn">إلغاء</button>
+        <button class="btn btn-primary" id="save-skin-btn">حفظ ونشر السكن</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Promote Sub-Admin Modal -->
+  <div class="admin-modal-backdrop" id="modal-promote-admin">
+    <div class="admin-modal-box">
+      <div class="admin-modal-header">
+        <h3>🛡️ ترقية مستخدم وتحديد الصلاحيات</h3>
+        <button class="icon-btn modal-close-btn" id="close-promote-modal">✕</button>
+      </div>
+      <div class="admin-modal-body">
+        <div class="form-group">
+          <label class="form-label" for="promote-user-select">اختر المستخدم للترقية:</label>
+          <select id="promote-user-select" class="form-control">
+            <option value="">-- اختر مستخدم مسجل --</option>
+          </select>
+        </div>
+
+        <label class="form-label">حدد الصلاحيات الممنوحة:</label>
+        <div class="permissions-checklist" id="promote-permissions-list">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+      <div class="admin-modal-footer">
+        <button class="btn btn-outline modal-close-btn" id="cancel-promote-btn">إلغاء</button>
+        <button class="btn btn-primary" id="save-promote-btn">تأكيد الترقية ومنح الصلاحيات</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <p>© 2026 Classic Games Online — Admin Panel</p>
+  </footer>
+
+  <script type="module" src="./js/admin.js"></script>
+</body>
+</html>

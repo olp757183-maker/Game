@@ -53,23 +53,16 @@ async function runSuite() {
     assert(content.includes('store.html'), `${page} links correctly to store.html`);
   }
 
-  // 3. Store Page Emptiness Verification
-  console.log('\n--- 3. Store Page Emptiness Verification ---');
+  // 3. Store Page Structure & Component Verification
+  console.log('\n--- 3. Store Page Structure & Component Verification ---');
   const storeHtml = fs.readFileSync(path.join(CLIENT_DIR, 'store.html'), 'utf8');
-  assert(storeHtml.includes('<main class="store-container"'), 'store.html defines standard store-container main tag');
-  
-  // Verify main content is completely empty
-  const mainRegex = /<main class="store-container"[^>]*>([\s\S]*?)<\/main>/;
-  const match = storeHtml.match(mainRegex);
-  assert(match !== null, 'Found main store container');
-  const innerMain = match ? match[1].trim() : 'NOT_FOUND';
-  assert(innerMain === '', `Store main container is strictly empty (got: "${innerMain}")`);
-
-  // Verify no products, cards, payment, or inventory elements exist
-  const forbiddenKeywords = ['product', 'card', 'price', 'checkout', 'buy', 'coin', 'balance', 'currency'];
-  for (const kw of forbiddenKeywords) {
-    assert(!innerMain.toLowerCase().includes(kw), `No "${kw}" elements present inside store page`);
-  }
+  assert(storeHtml.includes('<main class="store-container'), 'store.html defines standard store-container main tag');
+  assert(storeHtml.includes('id="user-points-balance"'), 'store.html defines user points balance display');
+  assert(storeHtml.includes('id="store-skins-container"'), 'store.html defines store skins grid container');
+  assert(storeHtml.includes('data-filter="uno"'), 'store.html defines UNO skins filter button');
+  assert(storeHtml.includes('data-filter="chess"'), 'store.html defines Chess skins filter button');
+  assert(storeHtml.includes('data-filter="domino"'), 'store.html defines Domino skins filter button');
+  assert(storeHtml.includes('id="modal-purchase-skin"'), 'store.html defines purchase confirmation modal');
 
   // 4. Server Route Verification
   console.log('\n--- 4. HTTP Routes for Store ---');

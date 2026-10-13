@@ -90,9 +90,10 @@ export function renderChess(state, options = {}) {
 
   const topPlayer = isFlipped ? whitePlayer : blackPlayer;
   const bottomPlayer = isFlipped ? blackPlayer : whitePlayer;
+  const mySkin = state.room?.players?.find(p => p.id === myId)?.preferences?.gameSkins?.chess || state.preferences?.gameSkins?.chess || 'default';
 
   return `
-    <div class="game-container chess-game-container">
+    <div class="game-container chess-game-container skin-${mySkin}">
       <!-- Top Opponent Strip -->
       <div class="game-header chess-player-strip ${topPlayer.color === turnColor ? 'active-clock' : ''}">
         <div class="player-info-wrap">

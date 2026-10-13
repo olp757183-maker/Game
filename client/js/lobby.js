@@ -152,10 +152,35 @@ function setupLobbyEvents() {
         gameSelect.value = game;
         updatePlayerCountGrid(game);
         updateRulesEditorFields(game);
+        updateSkinOptions(game);
       }
       ui.openModal('create-room-modal');
     });
   });
+
+  async function updateSkinOptions(gameType) {
+    const skinSelect = document.getElementById('create-room-skin');
+    if (!skinSelect) return;
+    skinSelect.innerHTML = '<option value="default">الافتراضي (Default)</option>';
+    try {
+      const ownedSkins = await api.getMySkins(gameType);
+      const user = api.getUser();
+      const activeSkin = user?.preferences?.gameSkins?.[gameType] || 'default';
+      if (ownedSkins && ownedSkins.length > 0) {
+        for (const skin of ownedSkins) {
+          const opt = document.createElement('option');
+          opt.value = skin.id;
+          opt.textContent = `${skin.name}`;
+          if (skin.id === activeSkin) {
+            opt.selected = true;
+          }
+          skinSelect.appendChild(opt);
+        }
+      }
+    } catch (err) {
+      console.warn('Could not load skins for lobby room creation', err);
+    }
+  }
 
   // Filter Pills
   document.querySelectorAll('.filter-pill').forEach(pill => {
@@ -180,6 +205,7 @@ function setupLobbyEvents() {
       const selectedGame = document.getElementById('create-room-game')?.value || 'uno';
       updatePlayerCountGrid(selectedGame);
       updateRulesEditorFields(selectedGame);
+      updateSkinOptions(selectedGame);
       ui.openModal('create-room-modal');
     });
   }
@@ -191,6 +217,7 @@ function setupLobbyEvents() {
       const g = e.target.value;
       updatePlayerCountGrid(g);
       updateRulesEditorFields(g);
+      updateSkinOptions(g);
     });
   }
 
@@ -209,6 +236,7 @@ function setupLobbyEvents() {
       const privacy = document.getElementById('create-room-privacy')?.value;
       const maxPlayers = parseInt(document.getElementById('create-room-max-players')?.value || '4', 10);
       const rules = collectRulesFromForm(gameType);
+      const chosenSkin = document.getElementById('create-room-skin')?.value || 'default';
 
       if (!gameType) {
         showToast('يرجى اختيار نوع اللعبة أولاً', 'warning');
@@ -219,6 +247,11 @@ function setupLobbyEvents() {
       if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.textContent = '⏳ جاري إنشاء الغرفة...';
+      }
+
+      // Equip chosen skin before creating room
+      if (chosenSkin) {
+        await api.equipSkin(gameType, chosenSkin).catch(() => {});
       }
 
       const requestId = `cr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

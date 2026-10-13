@@ -73,8 +73,10 @@ export function renderDomino(state, options = {}) {
     ? (state.myHand?.length > 0)
     : (state.myHand || []).some(t => t.left === state.leftEnd || t.right === state.leftEnd || t.left === state.rightEnd || t.right === state.rightEnd);
 
+  const mySkin = state.room?.players?.find(p => p.id === myId)?.preferences?.gameSkins?.domino || state.preferences?.gameSkins?.domino || 'default';
+
   return `
-    <div class="game-container domino-game-container">
+    <div class="game-container domino-game-container skin-${mySkin}">
       <!-- Game Header / Ends & Boneyard Meta -->
       <div class="game-header">
         <div class="boneyard-pill ${isMyTurn && state.boneyardCount > 0 && !hasPlayableTile ? 'can-draw-boneyard pulse-glow' : ''}"

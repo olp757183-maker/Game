@@ -873,19 +873,75 @@
 }
 
 /* --------------------------------------------------------------------------
-   Skins (UNO)
+   Skins (UNO, Chess, Domino)
    -------------------------------------------------------------------------- */
+.uno-game-container.skin-uno_dark .uno-card,
 .uno-game-container.skin-dark .uno-card {
-  filter: brightness(0.6) contrast(1.3);
+  filter: brightness(0.65) contrast(1.3);
   border-color: #222;
 }
 
+.uno-game-container.skin-uno_neon .uno-card,
 .uno-game-container.skin-neon .uno-card {
   border-color: #fff;
   box-shadow: 0 0 15px currentColor;
 }
+.uno-game-container.skin-uno_neon .uno-card-oval,
 .uno-game-container.skin-neon .uno-card-oval {
   background: rgba(255, 255, 255, 0.4);
+}
+
+/* Chess Skins */
+.chess-game-container.skin-chess_royal_wood .chess-board {
+  background: #854d0e;
+  border-color: #583101;
+  box-shadow: 0 0 25px rgba(133, 77, 14, 0.4);
+}
+.chess-game-container.skin-chess_royal_wood .square-light {
+  background: #fef08a;
+}
+.chess-game-container.skin-chess_royal_wood .square-dark {
+  background: #a16207;
+}
+
+.chess-game-container.skin-chess_cyber_neon .chess-board {
+  border-color: #06b6d4;
+  box-shadow: 0 0 25px rgba(6, 182, 212, 0.5);
+}
+.chess-game-container.skin-chess_cyber_neon .square-light {
+  background: #0f172a;
+}
+.chess-game-container.skin-chess_cyber_neon .square-dark {
+  background: #1e1b4b;
+}
+.chess-game-container.skin-chess_cyber_neon .chess-piece {
+  filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.8));
+}
+
+/* Domino Skins */
+.domino-game-container.skin-domino_golden_ivory .domino-tile {
+  background: #fef9c3;
+  border-color: #eab308;
+  box-shadow: 0 0 10px rgba(234, 179, 8, 0.3);
+}
+.domino-game-container.skin-domino_golden_ivory .pip {
+  background: #b45309;
+}
+.domino-game-container.skin-domino_golden_ivory .tile-divider {
+  background: #ca8a04;
+}
+
+.domino-game-container.skin-domino_obsidian_blue .domino-tile {
+  background: #090d16;
+  border-color: #0284c7;
+  box-shadow: 0 0 15px rgba(2, 132, 199, 0.4);
+}
+.domino-game-container.skin-domino_obsidian_blue .pip {
+  background: #38bdf8;
+  box-shadow: 0 0 6px #38bdf8;
+}
+.domino-game-container.skin-domino_obsidian_blue .tile-divider {
+  background: #0284c7;
 }
 
 /* --------------------------------------------------------------------------

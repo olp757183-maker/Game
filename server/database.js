@@ -103,6 +103,17 @@ db.exec(`
     timestamp INTEGER NOT NULL,
     FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS match_points (
+    match_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    game_type TEXT NOT NULL,
+    points INTEGER NOT NULL,
+    rank INTEGER,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (match_id, user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `);
 
 // Safe migration for existing databases
@@ -223,6 +234,62 @@ export const database = {
         VALUES (?, ?, 1, ?, ?, ?)
       `).run(userId, game, won ? 1 : 0, won ? 0 : 1, points);
     }
+  },
+
+  // Authoritative match points awarding with duplicate prevention
+  awardMatchPoints({ matchId, userId, gameType, points = 0, rank = null, isWin = false, isLoss = false, isDraw = false }) {
+    // 1. Authoritative check: registered user only!
+    const user = this.findUserById(userId);
+    if (!user || user.isGuest) {
+      return { awarded: false, reason: 'GUEST_OR_UNKNOWN', points: 0 };
+    }
+
+    // 2. Atomic duplicate prevention check via match_points primary key
+    try {
+      const stmt = db.prepare(`
+        INSERT INTO match_points (match_id, user_id, game_type, points, rank, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      stmt.run(matchId, userId, gameType, points, rank, Date.now());
+    } catch (err) {
+      if (err.message && (err.message.includes('UNIQUE') || err.message.includes('PRIMARY KEY'))) {
+        return { awarded: false, reason: 'ALREADY_AWARDED', points: 0 };
+      }
+      throw err;
+    }
+
+    // 3. Atomically update permanent user_stats
+    const winInc = isWin ? 1 : 0;
+    const lossInc = isLoss ? 1 : 0;
+    const existing = db.prepare('SELECT * FROM user_stats WHERE user_id = ? AND game = ?').get(userId, gameType);
+    if (existing) {
+      db.prepare(`
+        UPDATE user_stats
+        SET matches_played = matches_played + 1,
+            wins = wins + ?,
+            losses = losses + ?,
+            score = score + ?
+        WHERE user_id = ? AND game = ?
+      `).run(winInc, lossInc, points, userId, gameType);
+    } else {
+      db.prepare(`
+        INSERT INTO user_stats (user_id, game, matches_played, wins, losses, score)
+        VALUES (?, ?, 1, ?, ?, ?)
+      `).run(userId, gameType, winInc, lossInc, points);
+    }
+
+    return { awarded: true, points, rank };
+  },
+
+  getMatchPoints(matchId, userId) {
+    const stmt = db.prepare('SELECT * FROM match_points WHERE match_id = ? AND user_id = ?');
+    return stmt.get(matchId, userId);
+  },
+
+  getUserTotalScore(userId) {
+    const stmt = db.prepare('SELECT SUM(score) as total_score FROM user_stats WHERE user_id = ?');
+    const row = stmt.get(userId);
+    return row?.total_score || 0;
   },
 
   // Match Results & History

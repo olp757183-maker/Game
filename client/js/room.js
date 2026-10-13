@@ -664,19 +664,35 @@ function showGameOverOverlay(room, game, isHost, myId) {
   const rematchNeeded = room.rematchNeeded || room.players?.length || 2;
   const hasVotedRematch = rematchVotes.includes(currentUserId);
 
-  // Scores breakdown
+  // Scores & Awarded Match Points breakdown
   let scoresHtml = '';
   if (game?.scores && Object.keys(game.scores).length > 0) {
     scoresHtml = `
       <div class="winner-scores-box">
-        <h4 class="winner-scores-title">النقاط النهائية (Final Scores)</h4>
+        <h4 class="winner-scores-title">النتائج ونقاط الترتيب</h4>
         <div class="winner-scores-grid">
-          ${Object.entries(game.scores).map(([player, score]) => `
+          ${Object.entries(game.scores).map(([player, score]) => {
+            const playerObj = room.players?.find(p => p.username === player || p.id === player);
+            const pId = playerObj ? playerObj.id : player;
+            const pts = (game.awardedPoints && game.awardedPoints[pId] !== undefined) ? game.awardedPoints[pId] : null;
+            let ptsBadge = '';
+            if (pts !== null) {
+              if (playerObj?.isGuest) {
+                ptsBadge = `<span style="font-size: 0.8rem; color: var(--text-muted); margin-inline-start: 6px;">(ضيف: 0 نقطة)</span>`;
+              } else if (pts > 0) {
+                ptsBadge = `<span style="font-size: 0.85rem; color: #10b981; font-weight: 800; margin-inline-start: 6px;">(+${pts} نقطة)</span>`;
+              } else {
+                ptsBadge = `<span style="font-size: 0.8rem; color: var(--text-muted); margin-inline-start: 6px;">(0 نقطة)</span>`;
+              }
+            }
+            return `
             <div class="winner-score-pill">
               <span>${escapeHtml(player)}:</span>
               <strong style="color: var(--accent); margin-inline-start: 6px;">${score}</strong>
+              ${ptsBadge}
             </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
       </div>
     `;

@@ -606,6 +606,21 @@ export class ChessGame {
     }
   }
 
+  getFinalRankings() {
+    if (this.status !== GAME_STATUS.MATCH_END && this.status !== GAME_STATUS.FINISHED) {
+      return [];
+    }
+    if (this.draw) {
+      return this.players.map(p => ({ id: p.id, username: p.username, rank: 1, isDraw: true }));
+    }
+    const winner = this.players.find(p => p.id === this.winnerId || p.username === this.winner);
+    const loser = this.players.find(p => p.id === this.loserId || p.username === this.loser);
+    const result = [];
+    if (winner) result.push({ id: winner.id, username: winner.username, rank: 1 });
+    if (loser) result.push({ id: loser.id, username: loser.username, rank: 2 });
+    return result;
+  }
+
   getPublicState() {
     const currentTurnPlayer = this.players.find(p => p.color === this.currentTurn);
     const currentElapsed = (this.status === GAME_STATUS.PLAYING && currentTurnPlayer) ? Math.max(0, (Date.now() - this.turnStartedAt) / 1000) : 0;
@@ -638,6 +653,8 @@ export class ChessGame {
       finishedAt: this.finishedAt || this.endedAt,
       round: this.round,
       scores: this.scores,
+      finalRankings: this.getFinalRankings(),
+      awardedPoints: this.awardedPoints || null,
       rules: this.rules,
       startedAt: this.startedAt,
       endedAt: this.endedAt,
@@ -696,6 +713,8 @@ export class ChessGame {
       finishedAt: this.finishedAt || this.endedAt,
       round: this.round,
       scores: this.scores,
+      finalRankings: this.getFinalRankings(),
+      awardedPoints: this.awardedPoints || null,
       rules: this.rules,
       startedAt: this.startedAt,
       endedAt: this.endedAt,

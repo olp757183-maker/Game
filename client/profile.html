@@ -89,12 +89,19 @@
         const avatarEl = document.getElementById('profile-avatar-display');
         avatarEl.className = `avatar-badge ${fullProfile.avatar || 'avatar1'}`;
 
+        const totalScore = (fullProfile.stats || []).reduce((sum, s) => sum + (s.score || 0), 0);
+        const emailEl = document.getElementById('profile-email-display');
+        emailEl.innerHTML = fullProfile.isGuest
+          ? `<span style="color: var(--text-muted);">حساب ضيف (النقاط متاحة للحسابات المسجلة فقط)</span>`
+          : `${fullProfile.email || ''} <div style="display: inline-flex; align-items: center; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981; padding: 0.25rem 0.65rem; border-radius: 999px; font-weight: 700; font-size: 0.85rem; margin-top: 0.35rem;">🏆 إجمالي النقاط: ${totalScore} نقطة</div>`;
+
         const statsCont = document.getElementById('profile-stats-container');
         if (fullProfile.stats && fullProfile.stats.length > 0) {
           statsCont.innerHTML = fullProfile.stats.map(s => `
             <div style="background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.2rem; text-align: center;">
               <div style="font-size: 0.9rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">${s.game}</div>
-              <div style="font-size: 1.5rem; font-weight: 900; color: var(--accent); margin: 0.25rem 0;">${s.wins} Wins</div>
+              <div style="font-size: 1.4rem; font-weight: 900; color: #10b981; margin: 0.25rem 0;">⭐ ${s.score || 0} نقطة</div>
+              <div style="font-size: 1.1rem; font-weight: 800; color: var(--accent); margin-bottom: 0.2rem;">${s.wins} Wins</div>
               <div style="font-size: 0.8rem; color: var(--text-muted);">${s.matchesPlayed} Matches (${s.losses} Losses)</div>
             </div>
           `).join('');

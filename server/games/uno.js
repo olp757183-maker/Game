@@ -624,6 +624,39 @@ export class UnoGame {
     }
   }
 
+  getFinalRankings() {
+    if (this.status !== GAME_STATUS.MATCH_END && this.status !== GAME_STATUS.FINISHED) {
+      return [];
+    }
+    if (this.draw) {
+      return this.players.map(p => ({ id: p.id, username: p.username, rank: 1, isDraw: true }));
+    }
+    const winnerId = this.winnerId;
+    const winner = this.players.find(p => p.id === winnerId || p.username === this.winner);
+    const others = this.players.filter(p => p.id !== (winner ? winner.id : null));
+
+    others.sort((a, b) => {
+      if (this.rules && this.rules.singleRound === false) {
+        return (this.scores[b.id] || 0) - (this.scores[a.id] || 0);
+      }
+      const handLenA = a.hand ? a.hand.length : 0;
+      const handLenB = b.hand ? b.hand.length : 0;
+      if (handLenA !== handLenB) return handLenA - handLenB;
+      const valA = (a.hand || []).reduce((s, c) => s + (c.score || 0), 0);
+      const valB = (b.hand || []).reduce((s, c) => s + (c.score || 0), 0);
+      return valA - valB;
+    });
+
+    const result = [];
+    if (winner) {
+      result.push({ id: winner.id, username: winner.username, rank: 1 });
+    }
+    others.forEach((p, idx) => {
+      result.push({ id: p.id, username: p.username, rank: idx + 2 });
+    });
+    return result;
+  }
+
   startNextRound() {
     this.roundNumber++;
     this.status = GAME_STATUS.PLAYING;
@@ -659,6 +692,8 @@ export class UnoGame {
       startedAt: this.startedAt,
       endedAt: this.endedAt,
       scores: this.scores,
+      finalRankings: this.getFinalRankings(),
+      awardedPoints: this.awardedPoints || null,
       rules: this.rules,
       currentColor: this.currentColor,
       currentTurn: current ? current.id : null,
@@ -718,6 +753,8 @@ export class UnoGame {
       startedAt: this.startedAt,
       endedAt: this.endedAt,
       scores: this.scores,
+      finalRankings: this.getFinalRankings(),
+      awardedPoints: this.awardedPoints || null,
       rules: this.rules,
       currentColor: this.currentColor,
       currentTurn: current ? current.id : null,

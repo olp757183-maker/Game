@@ -519,6 +519,36 @@ export class DominoGame {
     }
   }
 
+  getFinalRankings() {
+    if (this.status !== GAME_STATUS.MATCH_END && this.status !== GAME_STATUS.FINISHED) {
+      return [];
+    }
+    if (this.draw) {
+      return this.players.map(p => ({ id: p.id, username: p.username, rank: 1, isDraw: true }));
+    }
+    const winnerId = this.winnerId;
+    const winner = this.players.find(p => p.id === winnerId || p.username === this.winner);
+    const others = this.players.filter(p => p.id !== (winner ? winner.id : null));
+
+    others.sort((a, b) => {
+      if (this.rules && this.rules.singleRound === false) {
+        return (this.scores[b.id] || 0) - (this.scores[a.id] || 0);
+      }
+      const pipsA = (a.hand || []).reduce((s, t) => s + (t.weight || 0), 0);
+      const pipsB = (b.hand || []).reduce((s, t) => s + (t.weight || 0), 0);
+      return pipsA - pipsB;
+    });
+
+    const result = [];
+    if (winner) {
+      result.push({ id: winner.id, username: winner.username, rank: 1 });
+    }
+    others.forEach((p, idx) => {
+      result.push({ id: p.id, username: p.username, rank: idx + 2 });
+    });
+    return result;
+  }
+
   getPublicState() {
     const current = this.getCurrentPlayer();
 
@@ -542,6 +572,8 @@ export class DominoGame {
       roundWinnerId: this.roundWinnerId,
       roundPointsAwarded: this.roundPointsAwarded,
       scores: this.scores,
+      finalRankings: this.getFinalRankings(),
+      awardedPoints: this.awardedPoints || null,
       rules: this.rules,
       startedAt: this.startedAt,
       endedAt: this.endedAt,
@@ -593,6 +625,8 @@ export class DominoGame {
       roundWinnerId: this.roundWinnerId,
       roundPointsAwarded: this.roundPointsAwarded,
       scores: this.scores,
+      finalRankings: this.getFinalRankings(),
+      awardedPoints: this.awardedPoints || null,
       rules: this.rules,
       startedAt: this.startedAt,
       endedAt: this.endedAt,

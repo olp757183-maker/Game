@@ -8,6 +8,7 @@ import auth from './auth.js';
 import users from './users.js';
 import rooms, { activeRooms, setRoomBroadcaster } from './rooms.js';
 import database from './database.js';
+import { calculateMatchPoints, defaultExtractRankings } from './points.js';
 import { SOCKET_EVENTS, ROOM_STATUS, ERROR_CODES, GameActionError } from '../shared/constants.js';
 import { sanitizeChatMessage } from '../shared/validation.js';
 
@@ -36,7 +37,7 @@ setInterval(() => {
       processedActions.delete(key);
     }
   }
-}, 30000);
+}, 30000).unref();
 
 // Global io instance reference
 let ioInstance = null;
@@ -116,6 +117,92 @@ export function broadcastLobbyRoomUpdated(room) {
 export function broadcastLobbyRoomRemoved(roomId) {
   if (!ioInstance || !roomId) return;
   ioInstance.emit(SOCKET_EVENTS.LOBBY_ROOM_REMOVED, { id: roomId });
+}
+
+/**
+ * Authoritative Match Completion & Points Awarding Handler
+ * Ensures:
+ * 1. Strict deduplication (points awarded once per match per player).
+ * 2. Only authenticated registered accounts get points (guests get 0).
+ * 3. Exact points table & player count conditions applied.
+ */
+export function handleMatchFinished(room) {
+  if (!room || !room.gameInstance) return;
+  const game = room.gameInstance;
+
+  // 1. In-memory deduplication guard per match ID
+  if (!room.awardedMatchIds) {
+    room.awardedMatchIds = new Set();
+  }
+  const matchId = game.gameId || room.id;
+  if (room.awardedMatchIds.has(matchId)) {
+    return;
+  }
+  room.awardedMatchIds.add(matchId);
+  room.status = ROOM_STATUS.FINISHED;
+
+  // 2. Extract authoritative rankings from the game engine
+  const rankings = (typeof game.getFinalRankings === 'function')
+    ? game.getFinalRankings()
+    : defaultExtractRankings(game, room.players);
+
+  // 3. Calculate points according to official rules
+  const isDraw = Boolean(game.draw);
+  const totalPlayersCount = room.players.length;
+  const pointsMap = calculateMatchPoints(room.gameType, rankings, totalPlayersCount, isDraw);
+
+  game.finalRankings = rankings;
+  game.awardedPoints = {};
+  for (const [pId, pts] of pointsMap.entries()) {
+    game.awardedPoints[pId] = pts;
+  }
+
+  // 4. Broadcast winning/end state to ALL players immediately with zero disk delay
+  broadcastRoomState(room);
+  broadcastLobbyRoomUpdated(room);
+
+  // 5. Offload database persistence off the hot real-time network path
+  setImmediate(() => {
+    try {
+      database.updateRoomStatus(room.id, ROOM_STATUS.FINISHED);
+      database.recordMatchResult({
+        gameId: matchId,
+        roomId: room.id,
+        gameType: room.gameType,
+        players: room.players.map(p => ({ id: p.id, username: p.username, isGuest: p.isGuest })),
+        winner: game.winner,
+        loser: game.loser,
+        draw: isDraw,
+        reason: game.reason || 'NORMAL_FINISH',
+        scores: game.scores || {},
+        rankings,
+        awardedPoints: game.awardedPoints,
+        startedAt: game.startedAt || Date.now(),
+        endedAt: game.endedAt || Date.now()
+      });
+
+      for (const p of room.players) {
+        const playerRankObj = rankings.find(r => r.id === p.id);
+        const rank = playerRankObj ? playerRankObj.rank : null;
+        const pts = pointsMap.get(p.id) || 0;
+        const isWin = !isDraw && (rank === 1);
+        const isLoss = !isDraw && (rank !== null && rank > 1);
+
+        database.awardMatchPoints({
+          matchId,
+          userId: p.id,
+          gameType: room.gameType,
+          points: pts,
+          rank,
+          isWin,
+          isLoss,
+          isDraw
+        });
+      }
+    } catch (dbErr) {
+      console.error('Failed to record match stats and award points in background:', dbErr);
+    }
+  });
 }
 
 export function setupSocketServer(httpServer) {
@@ -561,40 +648,7 @@ export function setupSocketServer(httpServer) {
           // Check if match ended and record stats & match result
           const game = room.gameInstance;
           if (game.status === 'GAME_OVER' || game.status === 'MATCH_END' || game.status === 'FINISHED') {
-            room.status = ROOM_STATUS.FINISHED;
-
-            // Broadcast winning/end state to ALL players immediately with zero disk delay
-            broadcastRoomState(room);
-            broadcastLobbyRoomUpdated(room);
-
-            // Offload database persistence off the hot real-time network path
-            setImmediate(() => {
-              try {
-                database.updateRoomStatus(room.id, ROOM_STATUS.FINISHED);
-                database.recordMatchResult({
-                  gameId: game.gameId || `g_${Date.now()}`,
-                  roomId: room.id,
-                  gameType: room.gameType,
-                  players: room.players.map(p => ({ id: p.id, username: p.username })),
-                  winner: game.winner,
-                  loser: game.loser,
-                  draw: Boolean(game.draw),
-                  reason: game.reason || 'NORMAL_FINISH',
-                  scores: game.scores || {},
-                  startedAt: game.startedAt || Date.now(),
-                  endedAt: game.endedAt || Date.now()
-                });
-
-                const winnerName = game.winner;
-                for (const p of room.players) {
-                  const won = (p.username === winnerName);
-                  const pScore = (game.scores && (game.scores[p.id] || game.scores[p.username])) || 0;
-                  database.recordGameStat(p.id, room.gameType, won, pScore);
-                }
-              } catch (dbErr) {
-                console.error('Failed to record match stats in background:', dbErr);
-              }
-            });
+            handleMatchFinished(room);
           } else {
             // Broadcast valid new state to ALL players in room immediately
             broadcastRoomState(room);
@@ -851,11 +905,12 @@ export function setupSocketServer(httpServer) {
                   if (room.gameInstance && typeof room.gameInstance.handlePlayerLeft === 'function') {
                     room.gameInstance.handlePlayerLeft(user.id);
                     if (['GAME_OVER', 'MATCH_END', 'FINISHED'].includes(room.gameInstance.status)) {
-                      room.status = ROOM_STATUS.FINISHED;
+                      handleMatchFinished(room);
+                    } else {
+                      broadcastRoomState(room);
+                      broadcastLobbyRoomUpdated(room);
                     }
                   }
-                  broadcastRoomState(room);
-                  broadcastLobbyRoomUpdated(room);
                 }
               }, 45000);
               room.disconnectTimers.set(user.id, timer);

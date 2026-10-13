@@ -146,10 +146,11 @@ class ApiService {
     return res.rooms;
   }
 
-  async createRoom({ gameType, maxPlayers, privacy, rules }) {
+  async createRoom({ gameType, maxPlayers, privacy, rules, requestId }) {
     return this.request('/rooms', {
       method: 'POST',
-      body: JSON.stringify({ gameType, maxPlayers, privacy, rules })
+      body: JSON.stringify({ gameType, maxPlayers, privacy, rules, requestId }),
+      timeout: 12000
     });
   }
 

@@ -149,13 +149,41 @@ app.get('/api/rooms', (req, res) => {
   res.json({ rooms: list });
 });
 
+// Idempotent room creation cache (requestId -> { room: roomInfo, timestamp })
+const processedRoomRequests = new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of processedRoomRequests.entries()) {
+    if (now - val.timestamp > 60000) {
+      processedRoomRequests.delete(key);
+    }
+  }
+}, 30000);
+
 // Create Room
 app.post('/api/rooms', auth.middleware, (req, res) => {
+  const startTime = Date.now();
+  const requestId = req.body.requestId || ('req_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
+
   try {
     const { gameType, maxPlayers, privacy, rules } = req.body;
+    console.log(`[CREATE_ROOM_RECEIVED] requestId=${requestId} user=${req.user.username} (${req.user.id}) gameType=${gameType} maxPlayers=${maxPlayers} privacy=${privacy || 'public'}`);
+
+    // Check idempotent deduplication for rapid re-sends
+    if (requestId && processedRoomRequests.has(requestId)) {
+      const cached = processedRoomRequests.get(requestId);
+      const existing = rooms.getRoomById(cached.room.id);
+      if (existing) {
+        console.log(`[CREATE_ROOM_IDEMPOTENT_HIT] requestId=${requestId} roomId=${cached.room.id}`);
+        return res.status(200).json({ success: true, room: existing.getPublicRoomInfo(), requestId });
+      }
+    }
 
     const gVal = validateGameType(gameType);
-    if (!gVal.valid) return res.status(400).json({ error: gVal.errorEn, errorAr: gVal.errorAr });
+    if (!gVal.valid) {
+      console.warn(`[CREATE_ROOM_ERROR] requestId=${requestId} validationError=${gVal.errorEn}`);
+      return res.status(400).json({ error: gVal.errorEn, errorAr: gVal.errorAr, requestId });
+    }
 
     const room = rooms.createRoom({
       hostUser: req.user,
@@ -165,11 +193,16 @@ app.post('/api/rooms', auth.middleware, (req, res) => {
       rules: rules || {}
     });
 
-    broadcastLobbyRoomCreated(room);
+    const roomInfo = room.getPublicRoomInfo();
+    processedRoomRequests.set(requestId, { room: roomInfo, timestamp: Date.now() });
 
-    res.status(201).json({ room: room.getPublicRoomInfo() });
+    broadcastLobbyRoomCreated(room);
+    console.log(`[CREATE_ROOM_SUCCESS] requestId=${requestId} roomId=${room.id} code=${room.code} duration=${Date.now() - startTime}ms`);
+
+    res.status(201).json({ success: true, room: roomInfo, requestId });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error(`[CREATE_ROOM_ERROR] requestId=${requestId} error=${err.message} duration=${Date.now() - startTime}ms`);
+    res.status(400).json({ error: err.message, errorAr: err.message, requestId });
   }
 });
 

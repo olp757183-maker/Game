@@ -63,14 +63,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  console.log(`[ROOM_ENTER_REQUEST] roomId=${roomId} code=${roomCode}`);
+
   // Fetch initial room info via HTTP API immediately so skeleton renders instantly
   try {
     const res = await api.getRoom(roomId || roomCode);
     if (res && res.room) {
+      console.log(`[ROOM_HTTP_FETCH_SUCCESS] roomId=${res.room.id} code=${res.room.code} players=${res.room.players?.length}`);
       handleRoomState({ room: res.room });
     }
   } catch (err) {
-    console.warn('[Room] HTTP initial fetch error:', err.message);
+    console.warn('[ROOM_HTTP_FETCH_ERROR] error:', err.message);
     if (err.status === 404 || (err.message && (err.message.includes('not found') || err.message.includes('غير موجودة')))) {
       const stage = document.getElementById('game-stage-container');
       if (stage) {
@@ -89,6 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Safety timeout: If room state is not received within 10 seconds, show graceful error notice
   roomLoadTimeout = setTimeout(() => {
     if (!currentRoomData) {
+      console.warn(`[ROOM_LOAD_TIMEOUT] roomId=${roomId || roomCode} room state not synced in 10s`);
       const stage = document.getElementById('game-stage-container');
       if (stage && !stage.querySelector('.room-load-error')) {
         stage.innerHTML = `
@@ -593,7 +597,22 @@ function showRoundEndOverlay(room, game, isHost, myId) {
             ▶ الجولة التالية
           </button>
         ` : `
-  function showGameOverOverlay(room, game, isHost, myId) {
+          <div class="turn-status-banner">🕒 في انتظار المضيف لبدء الجولة التالية...</div>
+        `}
+      </div>
+    </div>
+  `;
+
+  const nextBtn = overlay.querySelector('#next-round-btn');
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      sfx.click();
+      socket.nextRound(room.id);
+    });
+  }
+}
+
+function showGameOverOverlay(room, game, isHost, myId) {
   let overlay = document.getElementById('game-over-overlay');
   if (!overlay) {
     overlay = document.createElement('div');

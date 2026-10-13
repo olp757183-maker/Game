@@ -221,8 +221,14 @@ function setupLobbyEvents() {
         submitBtn.textContent = '⏳ جاري إنشاء الغرفة...';
       }
 
+      const requestId = `cr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const startTime = Date.now();
+      console.log(`[CREATE_ROOM_REQUEST] requestId=${requestId} gameType=${gameType} maxPlayers=${maxPlayers} privacy=${privacy}`);
+
       try {
-        const res = await api.createRoom({ gameType, maxPlayers, privacy, rules });
+        const res = await api.createRoom({ gameType, maxPlayers, privacy, rules, requestId });
+        const elapsed = Date.now() - startTime;
+        console.log(`[CREATE_ROOM_SUCCESS] requestId=${requestId} roomId=${res.room.id} code=${res.room.code} elapsed=${elapsed}ms`);
         if (submitBtn) {
           submitBtn.textContent = '✅ تم إنشاء الغرفة!';
         }
@@ -231,7 +237,12 @@ function setupLobbyEvents() {
         window.location.href = `/room/${res.room.id}`;
       } catch (err) {
         isCreatingRoom = false;
-        console.error('[Lobby] Failed to create room:', err);
+        const elapsed = Date.now() - startTime;
+        if (err.status === 408) {
+          console.warn(`[CREATE_ROOM_TIMEOUT] requestId=${requestId} elapsed=${elapsed}ms`);
+        } else {
+          console.error(`[CREATE_ROOM_ERROR] requestId=${requestId} error=${err.message} elapsed=${elapsed}ms`);
+        }
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = originalText;

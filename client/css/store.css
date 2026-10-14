@@ -115,7 +115,7 @@
 /* Skins Grid */
 .store-skins-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
   gap: 1.5rem;
 }
 
@@ -312,3 +312,52 @@
   justify-content: flex-end;
   gap: 0.75rem;
 }
+
+/* Store Responsive Overrides */
+@media (max-width: 768px) {
+  .store-hero {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    padding: 1.25rem 1rem;
+    gap: 1rem;
+  }
+  .store-title-wrap h1 {
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+  .store-balance-badge {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .store-page-wrap {
+    padding: 1rem 0.5rem 2rem;
+  }
+  .store-skins-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .skin-card-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  .skin-price-tag {
+    justify-content: center;
+  }
+  .btn-skin-action {
+    width: 100%;
+    min-height: 44px;
+  }
+  .store-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .store-modal-footer .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+

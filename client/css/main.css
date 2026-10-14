@@ -143,7 +143,8 @@ a:hover {
   align-items: center;
 }
 
-.header-container {
+.header-container,
+.header-inner {
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
@@ -153,9 +154,11 @@ a:hover {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.5rem 0.75rem;
+  box-sizing: border-box;
 }
 
-.brand-logo {
+.brand-logo,
+.brand-link {
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -163,6 +166,12 @@ a:hover {
   font-weight: 800;
   color: var(--text);
   letter-spacing: -0.5px;
+  text-decoration: none;
+}
+
+.brand-title {
+  font-weight: 800;
+  color: var(--text);
 }
 
 .brand-icon {
@@ -455,23 +464,22 @@ a:hover {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  width: min(680px, calc(100vw - 24px));
+  width: min(680px, calc(100% - 24px));
+  max-width: 680px;
   max-height: min(90vh, calc(100dvh - 30px));
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   z-index: 1100;
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  position: relative;
+  margin: auto;
   animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (max-width: 640px) {
   .modal-box, .wild-modal-box {
-    width: calc(100vw - 16px);
+    width: min(640px, calc(100% - 16px));
     max-height: calc(100dvh - 20px);
     border-radius: var(--radius-md);
   }
@@ -491,8 +499,8 @@ a:hover {
 }
 
 @keyframes modalPop {
-  0% { transform: translate(-50%, -50%) scale(0.92); opacity: 0; }
-  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  0% { transform: scale(0.95); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .modal-header {
@@ -666,3 +674,54 @@ a:hover {
   font-size: 0.9rem;
   background: var(--surface-glass);
 }
+
+/* Settings & Profile Responsive Classes */
+.settings-wrap, .profile-wrap {
+  max-width: 800px;
+  width: 100%;
+  margin: 2.5rem auto;
+  padding: 0 1.25rem;
+  flex: 1;
+}
+
+.settings-card, .profile-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2.25rem;
+  box-shadow: var(--shadow-md);
+}
+
+.settings-btn-group {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.settings-btn-group .btn {
+  flex: 1 1 calc(50% - 0.75rem);
+  min-width: 120px;
+  min-height: 44px;
+}
+
+.profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .settings-wrap, .profile-wrap {
+    margin: 1.25rem auto;
+    padding: 0 0.75rem;
+  }
+  .settings-card, .profile-card {
+    padding: 1.25rem 1rem;
+  }
+  .settings-btn-group .btn {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+}
+

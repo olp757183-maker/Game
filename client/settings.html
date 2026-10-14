@@ -36,44 +36,44 @@
     </div>
   </header>
 
-  <main style="max-width: 700px; margin: 3rem auto; padding: 0 1.5rem; flex: 1;">
-    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2.25rem; box-shadow: var(--shadow-md);">
+  <main class="settings-wrap">
+    <div class="settings-card">
       <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 2rem;">⚙️ إعدادات الموقع</h2>
 
       <!-- Language Setting -->
       <div class="form-group" style="margin-bottom: 2rem;">
         <label class="form-label">اللغة (Language):</label>
-        <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
-          <button id="lang-ar-btn" class="btn btn-outline" style="flex: 1;">العربية (RTL)</button>
-          <button id="lang-en-btn" class="btn btn-outline" style="flex: 1;">English (LTR)</button>
+        <div class="settings-btn-group">
+          <button id="lang-ar-btn" class="btn btn-outline">العربية (RTL)</button>
+          <button id="lang-en-btn" class="btn btn-outline">English (LTR)</button>
         </div>
       </div>
 
       <!-- Theme Setting -->
       <div class="form-group" style="margin-bottom: 2rem;">
         <label class="form-label">المظهر (Theme):</label>
-        <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
-          <button id="theme-dark-btn" class="btn btn-outline" style="flex: 1;">🌙 الوضع الداكن (Dark)</button>
-          <button id="theme-light-btn" class="btn btn-outline" style="flex: 1;">☀️ الوضع الفاتح (Light)</button>
+        <div class="settings-btn-group">
+          <button id="theme-dark-btn" class="btn btn-outline">🌙 الوضع الداكن (Dark)</button>
+          <button id="theme-light-btn" class="btn btn-outline">☀️ الوضع الفاتح (Light)</button>
         </div>
       </div>
 
       <!-- Sound FX Setting -->
       <div class="form-group" style="margin-bottom: 2rem;">
         <label class="form-label">المؤثرات الصوتية (Sound Effects):</label>
-        <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
-          <button id="sound-on-btn" class="btn btn-outline" style="flex: 1;">🔊 تفعيل الصوت</button>
-          <button id="sound-off-btn" class="btn btn-outline" style="flex: 1;">🔇 كتم الصوت</button>
+        <div class="settings-btn-group">
+          <button id="sound-on-btn" class="btn btn-outline">🔊 تفعيل الصوت</button>
+          <button id="sound-off-btn" class="btn btn-outline">🔇 كتم الصوت</button>
         </div>
       </div>
 
       <!-- Game Skins Setting -->
       <div class="form-group" style="margin-bottom: 2rem; border-top: 1px solid var(--border); padding-top: 2rem;">
         <label class="form-label">أشكال الورق - UNO Skins:</label>
-        <div style="display: flex; gap: 1rem; margin-top: 0.5rem;" id="uno-skins-container">
-          <button class="btn btn-outline skin-btn active" data-game="uno" data-skin="default" style="flex: 1;">الأساسي (Default)</button>
-          <button class="btn btn-outline skin-btn" data-game="uno" data-skin="dark" style="flex: 1;">الداكن (Dark Cards)</button>
-          <button class="btn btn-outline skin-btn" data-game="uno" data-skin="neon" style="flex: 1;">نيون (Neon)</button>
+        <div class="settings-btn-group" id="uno-skins-container">
+          <button class="btn btn-outline skin-btn active" data-game="uno" data-skin="default">الأساسي (Default)</button>
+          <button class="btn btn-outline skin-btn" data-game="uno" data-skin="dark">الداكن (Dark Cards)</button>
+          <button class="btn btn-outline skin-btn" data-game="uno" data-skin="neon">نيون (Neon)</button>
         </div>
       </div>
     </div>

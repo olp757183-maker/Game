@@ -10,13 +10,56 @@
   gap: 1.5rem;
   padding: 1.5rem 1rem;
   max-width: 1440px;
+  width: 100%;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 @media (max-width: 992px) {
   .admin-layout {
     grid-template-columns: 1fr;
-    padding: 1rem 0.5rem;
+    padding: 1rem 0.6rem;
+    gap: 1rem;
+  }
+
+  .admin-sidebar {
+    position: static;
+    top: auto;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .admin-profile-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: right;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .admin-profile-avatar {
+    width: 42px;
+    height: 42px;
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  .admin-nav-list {
+    flex-direction: row;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.4rem;
+    padding-bottom: 0.35rem;
+    scrollbar-width: thin;
+  }
+
+  .admin-nav-item {
+    white-space: nowrap;
+    width: auto;
+    flex-shrink: 0;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.85rem;
   }
 }
 
@@ -123,6 +166,13 @@
   padding: 1.5rem;
   box-shadow: var(--shadow-md);
   min-height: 500px;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .admin-content {
+    padding: 1rem 0.75rem;
+  }
 }
 
 .admin-section {
@@ -161,9 +211,28 @@
 /* Stats Cards */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
   gap: 1rem;
   margin-bottom: 2rem;
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+  }
+  .stat-card {
+    padding: 0.75rem 0.5rem;
+  }
+  .stat-value {
+    font-size: 1.4rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .stat-card {
@@ -221,7 +290,7 @@
 
 .search-input-wrap {
   flex: 1;
-  min-width: 220px;
+  min-width: min(220px, 100%);
   position: relative;
 }
 
@@ -314,7 +383,7 @@
 /* Sub Admins Cards */
 .subadmins-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
   gap: 1.25rem;
 }
 
@@ -370,8 +439,15 @@
 /* Skins Grid */
 .skins-admin-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
   gap: 1.25rem;
+}
+
+@media (max-width: 480px) {
+  .skins-admin-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
 }
 
 .skin-admin-card {
@@ -465,10 +541,11 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 540px;
-  max-height: 90vh;
+  max-width: min(540px, calc(100% - 20px));
+  max-height: calc(100dvh - 30px);
   overflow-y: auto;
   box-shadow: var(--shadow-lg);
+  margin: auto;
 }
 
 .admin-modal-header {

@@ -157,3 +157,36 @@
   color: #fff;
 }
 
+/* Avatar selection in register */
+.avatar-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 480px) {
+  .auth-container {
+    margin: 1.25rem auto;
+    padding: 0 0.75rem;
+  }
+  .auth-card {
+    padding: 1.25rem 1rem;
+    border-radius: var(--radius-md);
+  }
+  .auth-header {
+    margin-bottom: 1.25rem;
+  }
+  .auth-header h1 {
+    font-size: 1.35rem;
+  }
+  .guest-card {
+    padding: 1rem 0.75rem;
+  }
+  .avatar-selection {
+    gap: 0.5rem;
+  }
+}
+

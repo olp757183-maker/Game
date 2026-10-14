@@ -625,6 +625,28 @@ a:hover {
 [dir="rtl"] .toast-warning { border-left: 1px solid var(--border); border-right: 4px solid var(--warning); }
 [dir="rtl"] .toast-info { border-left: 1px solid var(--border); border-right: 4px solid var(--info); }
 
+.toast-text {
+  flex: 1;
+  word-break: break-word;
+}
+
+.toast-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.2rem 0.4rem;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+
+.toast-close-btn:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
 /* ==========================================================================
    Forms & Controls
    ========================================================================== */

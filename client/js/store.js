@@ -96,11 +96,14 @@ function renderSkins() {
   container.innerHTML = filtered.map(skin => {
     const isOwned = Boolean(skin.isOwned);
     const isEquipped = Boolean(skin.isEquipped);
+    const isFree = skin.price === 0;
     const themeClass = skin.config?.theme ? `theme-${skin.config.theme}` : '';
 
     let actionBtnHtml = '';
     if (!currentUser || currentUser.isGuest) {
-      actionBtnHtml = `<button class="btn btn-primary btn-skin-action btn-buy-skin" data-id="${skin.id}" data-price="${skin.price}">شراء (${skin.price} نقطة)</button>`;
+      actionBtnHtml = isFree
+        ? `<button class="btn btn-primary btn-skin-action btn-buy-skin" data-id="${skin.id}" data-price="0" style="background: linear-gradient(135deg, #10b981, #059669); border: none;">🎁 الحصول مجاناً</button>`
+        : `<button class="btn btn-primary btn-skin-action btn-buy-skin" data-id="${skin.id}" data-price="${skin.price}">شراء (${skin.price} نقطة)</button>`;
     } else if (isEquipped) {
       actionBtnHtml = `
         <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
@@ -109,12 +112,18 @@ function renderSkins() {
         </div>
       `;
     } else if (isOwned) {
-      actionBtnHtml = `<button class="btn btn-outline btn-skin-action btn-equip-skin" data-id="${skin.id}" data-game="${skin.gameType}" style="border-color: var(--accent); color: var(--accent);">تفعيل السكن</button>`;
+      actionBtnHtml = `<button class="btn btn-outline btn-skin-action btn-equip-skin" data-id="${skin.id}" data-game="${skin.gameType}" style="border-color: var(--accent); color: var(--accent); font-weight: bold;">تفعيل السكن</button>`;
+    } else if (isFree) {
+      actionBtnHtml = `<button class="btn btn-primary btn-skin-action btn-buy-skin" data-id="${skin.id}" data-price="0" style="background: linear-gradient(135deg, #10b981, #059669); border: none;">🎁 الحصول مجاناً</button>`;
     } else {
       actionBtnHtml = `<button class="btn btn-primary btn-skin-action btn-buy-skin" data-id="${skin.id}" data-price="${skin.price}">شراء مقابل ${skin.price} نقطة</button>`;
     }
 
     const previewThumb = skin.previewUrl ? `<img src="${skin.previewUrl}" alt="${escapeHtml(skin.name)}" style="max-height: 85%; max-width: 85%; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));">` : `<span class="skin-demo-symbol">${gameIcons[skin.gameType] || '⭐'}</span>`;
+
+    const priceTagHtml = isFree
+      ? `<div class="skin-price-tag" style="color: #10b981;"><span>🎁</span><span style="font-weight: 800;">مجاني</span></div>`
+      : `<div class="skin-price-tag"><span>⭐</span><span>${skin.price}</span><span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">نقطة</span></div>`;
 
     return `
       <div class="store-skin-card ${themeClass} ${isEquipped ? 'is-equipped' : ''}">
@@ -129,11 +138,7 @@ function renderSkins() {
           <div class="skin-card-desc">${escapeHtml(skin.description || 'سكن بصري مميز للعبة')}</div>
         </div>
         <div class="skin-card-footer">
-          <div class="skin-price-tag">
-            <span>⭐</span>
-            <span>${skin.price}</span>
-            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">نقطة</span>
-          </div>
+          ${priceTagHtml}
           <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
             <button class="btn btn-sm btn-outline btn-preview-bundle" data-id="${skin.id}" title="معاينة محتويات وحجارة/قطع الحزمة">👁️ معاينة</button>
             ${actionBtnHtml}
@@ -175,6 +180,11 @@ function renderSkins() {
       const skin = allStoreSkins.find(s => s.id === skinId);
       if (!skin) return;
 
+      if (skin.isOwned) {
+        showToast('أنت تمتلك هذه الحزمة بالفعل', 'info');
+        return;
+      }
+
       if (!currentUser) {
         showToast('يرجى تسجيل الدخول بحساب مسجل لشراء السكنات', 'info');
         setTimeout(() => { window.location.href = '/login.html?redirect=/store.html'; }, 1000);
@@ -187,7 +197,7 @@ function renderSkins() {
       }
 
       const balance = currentUser.totalPoints || 0;
-      if (balance < skin.price) {
+      if (skin.price > 0 && balance < skin.price) {
         sfx.errorBuzz();
         showToast(`رصيد نقاطك (${balance}) غير كافٍ لشراء هذا السكن (${skin.price} نقطة). العب مباريات واكسب نقاطاً!`, 'error');
         return;
@@ -215,49 +225,109 @@ function renderSkins() {
   });
 }
 
+let isPurchasing = false;
+
 function setupPurchaseModal() {
   const modal = document.getElementById('modal-purchase-skin');
   document.getElementById('close-purchase-modal')?.addEventListener('click', () => modal?.classList.remove('active'));
   document.getElementById('cancel-purchase-btn')?.addEventListener('click', () => modal?.classList.remove('active'));
 
   document.getElementById('confirm-purchase-btn')?.addEventListener('click', async () => {
-    if (!pendingPurchaseSkin) return;
+    if (isPurchasing || !pendingPurchaseSkin) return;
+
+    if (pendingPurchaseSkin.isOwned) {
+      showToast('أنت تمتلك هذه الحزمة بالفعل', 'info');
+      modal?.classList.remove('active');
+      return;
+    }
+
     const confirmBtn = document.getElementById('confirm-purchase-btn');
-    if (confirmBtn) confirmBtn.disabled = true;
+    isPurchasing = true;
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'جاري المعالجة...';
+    }
 
     try {
       const res = await api.buySkin(pendingPurchaseSkin.id);
       sfx.play('win');
-      showToast(`تهانينا! تم شراء ${pendingPurchaseSkin.name} بنجاح!`, 'success');
+      const isFree = pendingPurchaseSkin.price === 0 || res.isFree;
+      const successMsg = isFree
+        ? `تهانينا! تمت إضافة حزمة ${pendingPurchaseSkin.name} إلى حسابك مجاناً!`
+        : `تهانينا! تم شراء ${pendingPurchaseSkin.name} بنجاح!`;
+      showToast(successMsg, 'success');
       modal?.classList.remove('active');
 
+      pendingPurchaseSkin.isOwned = true;
       // Update balance & reload skins
       await refreshUserState();
       await loadSkins();
     } catch (err) {
       sfx.errorBuzz();
-      showToast(err.message, 'error');
+      const msg = err.message || 'حدث خطأ أثناء إتمام العملية';
+      showToast(msg, 'error');
+
+      // If already owned, mark as owned and dismiss modal
+      if (msg.includes('تمتلك') || msg.toLowerCase().includes('already owns')) {
+        pendingPurchaseSkin.isOwned = true;
+        modal?.classList.remove('active');
+        await loadSkins();
+      }
     } finally {
-      if (confirmBtn) confirmBtn.disabled = false;
+      isPurchasing = false;
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = pendingPurchaseSkin && pendingPurchaseSkin.price === 0
+          ? '🎁 الحصول مجاناً وإضافة إلى حسابي'
+          : 'تأكيد الخصم والشراء';
+      }
     }
   });
 }
 
 function openPurchaseModal(skin) {
+  if (!skin) return;
+  if (skin.isOwned) {
+    showToast('أنت تمتلك هذه الحزمة بالفعل', 'info');
+    return;
+  }
+
   pendingPurchaseSkin = skin;
   const modal = document.getElementById('modal-purchase-skin');
+  const titleEl = document.getElementById('purchase-modal-title');
+  const promptEl = document.getElementById('purchase-modal-prompt');
   const nameEl = document.getElementById('purchase-skin-name');
   const priceEl = document.getElementById('purchase-skin-price');
   const currentBalEl = document.getElementById('purchase-current-balance');
   const afterBalEl = document.getElementById('purchase-after-balance');
+  const confirmBtn = document.getElementById('confirm-purchase-btn');
 
   const curBalance = currentUser?.totalPoints || 0;
-  const afterBalance = curBalance - skin.price;
+  const isFree = skin.price === 0;
+  const afterBalance = isFree ? curBalance : (curBalance - skin.price);
 
+  if (titleEl) {
+    titleEl.textContent = isFree ? '🎁 الحصول على حزمة مجانية' : '🛍️ تأكيد شراء السكن';
+  }
+  if (promptEl) {
+    promptEl.innerHTML = isFree
+      ? `هل ترغب في الحصول على الحزمة المجانية: <strong style="color: var(--accent);">${escapeHtml(skin.name)}</strong>؟`
+      : `هل ترغب في شراء السكن: <strong style="color: var(--accent);">${escapeHtml(skin.name)}</strong>؟`;
+  }
   if (nameEl) nameEl.textContent = skin.name;
-  if (priceEl) priceEl.textContent = `${skin.price} نقطة`;
+  if (priceEl) {
+    priceEl.textContent = isFree ? 'مجاني (0 نقطة)' : `${skin.price} نقطة`;
+    priceEl.style.color = isFree ? '#10b981' : 'var(--warning)';
+  }
   if (currentBalEl) currentBalEl.textContent = curBalance;
-  if (afterBalEl) afterBalEl.textContent = afterBalance;
+  if (afterBalEl) {
+    afterBalEl.textContent = isFree ? `${curBalance} (بدون خصم نقاط)` : afterBalance;
+    afterBalEl.style.color = isFree ? '#10b981' : 'var(--success)';
+  }
+  if (confirmBtn) {
+    confirmBtn.textContent = isFree ? '🎁 الحصول مجاناً وإضافة إلى حسابي' : 'تأكيد الخصم والشراء';
+    confirmBtn.style.background = isFree ? 'linear-gradient(135deg, #10b981, #059669)' : '';
+  }
 
   modal?.classList.add('active');
 }
@@ -278,14 +348,16 @@ async function openBundlePreviewModal(skin) {
         <div style="font-weight: 800; font-size: 1.1rem;">${escapeHtml(skin.name)}</div>
         <div style="font-size: 0.85rem; color: var(--text-muted);">${escapeHtml(skin.description || '')}</div>
       </div>
-      <div style="font-weight: 800; color: var(--warning); font-size: 1.2rem;">
-        ⭐ ${skin.price} نقطة
+      <div style="font-weight: 800; color: ${skin.price === 0 ? '#10b981' : 'var(--warning)'}; font-size: 1.2rem;">
+        ${skin.price === 0 ? '🎁 مجاني' : `⭐ ${skin.price} نقطة`}
       </div>
     `;
   }
 
   if (buyBtn) {
     buyBtn.style.display = skin.isOwned ? 'none' : 'inline-block';
+    buyBtn.textContent = skin.price === 0 ? '🎁 الحصول مجاناً' : 'شراء الآن';
+    buyBtn.style.background = skin.price === 0 ? 'linear-gradient(135deg, #10b981, #059669)' : '';
     buyBtn.onclick = () => {
       modal.style.display = 'none';
       openPurchaseModal(skin);

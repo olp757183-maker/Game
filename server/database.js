@@ -721,12 +721,16 @@ export const database = {
       throw new Error('Skin is not available for purchase');
     }
 
+    if (skin.price < 0 || isNaN(skin.price)) {
+      throw new Error('Invalid skin price');
+    }
+
     if (this.hasUserSkin(userId, skinId)) {
       throw new Error('User already owns this skin');
     }
 
     const currentBalance = this.getUserTotalScore(userId);
-    if (currentBalance < skin.price) {
+    if (skin.price > 0 && currentBalance < skin.price) {
       throw new Error(`Insufficient points. Price: ${skin.price}, Balance: ${currentBalance}`);
     }
 
@@ -740,7 +744,7 @@ export const database = {
         throw new Error('User already owns this skin');
       }
 
-      // Deduct points from user_stats
+      // Deduct points only if price > 0
       let needed = skin.price;
       if (needed > 0) {
         const statsRows = db.prepare('SELECT game, score FROM user_stats WHERE user_id = ? AND score > 0 ORDER BY score DESC').all(userId);
@@ -756,10 +760,13 @@ export const database = {
 
       // Record transaction
       const txId = `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const txType = skin.price === 0 ? 'skin_acquisition_free' : 'skin_purchase';
+      const txReason = skin.price === 0 ? `Free Bundle: ${skin.name}` : `Purchase: ${skin.name}`;
+
       db.prepare(`
         INSERT INTO point_transactions (id, user_id, type, amount, balance_after, reason, reference_id, created_at)
-        VALUES (?, ?, 'skin_purchase', ?, ?, ?, ?, ?)
-      `).run(txId, userId, -skin.price, balanceAfter, `Purchase: ${skin.name}`, skinId, Date.now());
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(txId, userId, txType, -skin.price, balanceAfter, txReason, skinId, Date.now());
 
       // Add to user_skins
       db.prepare(`
@@ -773,10 +780,11 @@ export const database = {
         success: true,
         skin,
         balanceAfter,
+        isFree: skin.price === 0,
         transactionId: txId
       };
     } catch (err) {
-      try { db.exec('ROLLBACK;'); } catch (rbErr) {}
+      try { db.exec('ROLLBACK;'); } catch (e) {}
       throw err;
     }
   },

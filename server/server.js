@@ -874,21 +874,32 @@ app.get('/api/store/my-skins', auth.middleware, (req, res) => {
   }
 });
 
-// Buy skin
+// Buy skin or acquire free bundle
 app.post('/api/store/buy/:id', auth.middleware, (req, res) => {
   try {
     const skinId = req.params.id;
     const result = database.purchaseSkin(req.user.id, skinId);
+    const isFree = result.isFree || (result.skin && result.skin.price === 0);
     res.json({
       success: true,
-      messageEn: 'Skin purchased successfully!',
-      messageAr: 'تم شراء السكن بنجاح!',
+      isFree,
+      message: isFree ? 'تم الحصول على الحزمة المجانية بنجاح!' : 'تم شراء السكن بنجاح!',
+      messageEn: isFree ? 'Free skin bundle acquired successfully!' : 'Skin purchased successfully!',
+      messageAr: isFree ? 'تم الحصول على الحزمة المجانية بنجاح!' : 'تم شراء السكن بنجاح!',
       skin: result.skin,
       newBalance: result.balanceAfter,
       transactionId: result.transactionId
     });
   } catch (err) {
-    res.status(400).json({ error: err.message, errorAr: err.message.includes('Insufficient') ? 'رصيد النقاط غير كافٍ للشراء' : err.message });
+    const errorArMap = {
+      'User already owns this skin': 'أنت تمتلك هذه الحزمة بالفعل',
+      'Only registered users can purchase skins': 'يجب تسجيل الدخول بحساب مسجل للحصول على السكنات',
+      'Skin not found': 'الحزمة المطلوبة غير موجودة',
+      'Skin is not available for purchase': 'هذه الحزمة غير متاحة حالياً',
+      'Invalid skin price': 'سعر الحزمة غير صالح'
+    };
+    const errorAr = errorArMap[err.message] || (err.message.includes('Insufficient') ? 'رصيد نقاطك غير كافٍ لإتمام عملية الشراء' : err.message);
+    res.status(400).json({ error: err.message, errorAr });
   }
 });
 

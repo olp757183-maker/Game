@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server/server.js",
     "dev": "node --watch server/server.js",
-    "test": "node tests/test-runner.js && node tests/test-realtime.js && node tests/test-authoritative-win-loss.js && node tests/test-game-logic-and-lifecycle.js && node tests/test-win-loss-and-interaction.js && node tests/test-all-games-simulation.js && node tests/test-games-ui-rendering.js && node tests/test-room-lifecycle-full.js && node tests/test-realtime-timers.js && node tests/test-game-over-rematch-exit.js && node tests/test-room-creation-resilience.js && node tests/test-store-page.js && node tests/test-register-email-validation.js && node tests/test-points-and-ranking-system.js && node tests/test-admin-and-store-system.js && node tests/test-bundle-editor-and-assets.js"
+    "test": "node tests/test-runner.js && node tests/test-realtime.js && node tests/test-authoritative-win-loss.js && node tests/test-game-logic-and-lifecycle.js && node tests/test-win-loss-and-interaction.js && node tests/test-all-games-simulation.js && node tests/test-games-ui-rendering.js && node tests/test-room-lifecycle-full.js && node tests/test-realtime-timers.js && node tests/test-game-over-rematch-exit.js && node tests/test-room-creation-resilience.js && node tests/test-store-page.js && node tests/test-register-email-validation.js && node tests/test-points-and-ranking-system.js && node tests/test-admin-and-store-system.js && node tests/test-bundle-editor-and-assets.js && node tests/test-free-bundle-and-mobile-admin.js"
   },
   "engines": {
     "node": ">=22.5.0"

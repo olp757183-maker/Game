@@ -5,7 +5,7 @@
 
 import { GAME_ASSETS_SPEC } from '../shared/game-assets-spec.js';
 import skinAssets from './skin-assets.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, showToast } from './utils.js';
 import api from './api.js';
 import ui from './ui.js';
 
@@ -63,21 +63,6 @@ const btnClosePreview = document.getElementById('btn-close-preview');
 const btnPreviewCloseFooter = document.getElementById('btn-preview-close-footer');
 const btnPreviewPublishAction = document.getElementById('btn-preview-publish-action');
 
-// Toast Notification Helper
-function showToast(message, type = 'info') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span> <span>${escapeHtml(message)}</span>`;
-  container.appendChild(toast);
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(10px)';
-    setTimeout(() => toast.remove(), 300);
-  }, 4000);
-}
-
 // Authentication Check
 async function checkAuth() {
   const token = api.getToken();
@@ -97,17 +82,8 @@ async function checkAuth() {
       return false;
     }
 
-    // Render User Header badge
-    const headerUserWrap = document.getElementById('header-user-actions');
-    if (headerUserWrap) {
-      headerUserWrap.innerHTML = `
-        <span class="user-greeting">مرحباً، <strong>${escapeHtml(currentUser.username)}</strong></span>
-        <button id="logout-btn" class="btn btn-outline btn-xs">خروج</button>
-      `;
-      document.getElementById('logout-btn')?.addEventListener('click', () => {
-        api.logout();
-      });
-    }
+    // Set up authoritative header & responsive drawer navigation
+    ui.setupGlobalNav();
 
     return true;
   } catch (err) {

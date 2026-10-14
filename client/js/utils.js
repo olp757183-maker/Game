@@ -84,15 +84,29 @@ class SoundEffects {
 export const sfx = new SoundEffects();
 
 /**
- * Toast Notification System
+ * Toast Notification System with Duplicate Prevention
  */
 export function showToast(message, type = 'info', duration = 3500) {
+  if (!message) return;
+
   let container = document.getElementById('toast-container');
   if (!container) {
     container = document.createElement('div');
     container.id = 'toast-container';
     container.className = 'toast-container';
     document.body.appendChild(container);
+  }
+
+  // Deduplicate: check if an identical toast is already active
+  const existingToasts = container.querySelectorAll('.toast');
+  for (const t of existingToasts) {
+    const txt = t.querySelector('.toast-text');
+    if (txt && txt.textContent.trim() === message.trim()) {
+      t.style.animation = 'none';
+      void t.offsetWidth;
+      t.style.animation = 'pulse 0.3s ease-in-out';
+      return;
+    }
   }
 
   const toast = document.createElement('div');
@@ -109,8 +123,20 @@ export function showToast(message, type = 'info', duration = 3500) {
   text.className = 'toast-text';
   text.textContent = message;
 
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'toast-close-btn';
+  closeBtn.textContent = '✕';
+  closeBtn.setAttribute('aria-label', 'إغلاق الإشعار');
+  closeBtn.onclick = (e) => {
+    e.stopPropagation();
+    toast.classList.remove('visible');
+    setTimeout(() => toast.remove(), 200);
+  };
+
   toast.appendChild(icon);
   toast.appendChild(text);
+  toast.appendChild(closeBtn);
   container.appendChild(toast);
 
   // Animate in
@@ -118,10 +144,13 @@ export function showToast(message, type = 'info', duration = 3500) {
 
   // Auto remove
   setTimeout(() => {
-    toast.classList.remove('visible');
-    setTimeout(() => toast.remove(), 300);
+    if (toast.parentNode) {
+      toast.classList.remove('visible');
+      setTimeout(() => toast.remove(), 300);
+    }
   }, duration);
 }
+
 
 export function formatTime(seconds) {
   const m = Math.floor(seconds / 60);

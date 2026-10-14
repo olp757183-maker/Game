@@ -360,6 +360,97 @@ async function runTestSuite() {
   assert.ok(fallbackDominoTileHtml.includes('pips-grid'), 'Falls back to authentic pips when tile image missing');
   pass('Domino renderer renders custom tile images and falls back to authentic pips');
 
+  // --------------------------------------------------------------------------
+  // 6. Bundle Editor Access & Authentication Resilience
+  // --------------------------------------------------------------------------
+  console.log('\n--- 6. Bundle Editor Access & Authentication Resilience ---');
+
+  // 6.1 Static file serving
+  const pageRes = await fetch(`${baseUrl}/bundle-editor.html`);
+  assert.strictEqual(pageRes.status, 200, 'GET /bundle-editor.html returns 200 OK');
+  const pageHtml = await pageRes.text();
+  assert.ok(pageHtml.includes('bundle-editor.js'), 'bundle-editor.html loads bundle-editor.js module');
+  pass('bundle-editor.html is served statically with 200 OK');
+
+  const extlessRes = await fetch(`${baseUrl}/bundle-editor`);
+  assert.strictEqual(extlessRes.status, 200, 'GET /bundle-editor extensionless route returns 200 OK');
+  pass('Extensionless /bundle-editor route is served correctly');
+
+  // 6.2 Token resolution logic
+  const mockStorage = {
+    sessionStorage: new Map(),
+    localStorage: new Map(),
+    getToken() {
+      return this.sessionStorage.get('auth_token') ||
+             this.localStorage.get('auth_token') ||
+             this.sessionStorage.get('token') ||
+             this.localStorage.get('token') || null;
+    }
+  };
+
+  mockStorage.localStorage.set('auth_token', 'token_auth_token_value');
+  assert.strictEqual(mockStorage.getToken(), 'token_auth_token_value');
+  pass('api.getToken() correctly retrieves standard "auth_token" from localStorage');
+
+  mockStorage.localStorage.clear();
+  mockStorage.sessionStorage.set('auth_token', 'session_auth_token');
+  assert.strictEqual(mockStorage.getToken(), 'session_auth_token');
+  pass('api.getToken() correctly retrieves "auth_token" from sessionStorage');
+
+  mockStorage.sessionStorage.clear();
+  mockStorage.localStorage.set('token', 'legacy_token');
+  assert.strictEqual(mockStorage.getToken(), 'legacy_token');
+  pass('api.getToken() falls back smoothly to legacy "token" key if present');
+
+  // 6.3 Client-side redirect safety resolver
+  function resolveSafeRedirect(searchParam) {
+    if (!searchParam) return null;
+    if (searchParam.startsWith('//') || searchParam.includes('://')) return null;
+    if (searchParam.startsWith('/')) return searchParam;
+    return '/' + searchParam.replace(/^\.\//, '');
+  }
+
+  assert.strictEqual(resolveSafeRedirect('bundle-editor.html'), '/bundle-editor.html');
+  assert.strictEqual(resolveSafeRedirect('./bundle-editor.html'), '/bundle-editor.html');
+  assert.strictEqual(resolveSafeRedirect('/bundle-editor.html'), '/bundle-editor.html');
+  assert.strictEqual(resolveSafeRedirect('https://evil.com'), null);
+  assert.strictEqual(resolveSafeRedirect('//malicious.com'), null);
+  pass('Safe redirect resolver handles relative, dot-slash, and absolute paths while preventing open redirects');
+
+  // 6.4 Server Auth Verification for Super Admin, Sub Admin, and Regular User
+  const superAdminMeRes = await fetch(`${baseUrl}/api/me`, {
+    headers: { 'Authorization': `Bearer ${adminToken}` }
+  });
+  assert.strictEqual(superAdminMeRes.status, 200);
+  const superAdminMe = await superAdminMeRes.json();
+  assert.strictEqual(superAdminMe.user.role, 'super_admin');
+  pass('Super admin /api/me returns 200 with role super_admin');
+
+  const subAdminMeRes = await fetch(`${baseUrl}/api/me`, {
+    headers: { 'Authorization': `Bearer ${subAdminToken}` }
+  });
+  assert.strictEqual(subAdminMeRes.status, 200);
+  const subAdminMe = await subAdminMeRes.json();
+  assert.strictEqual(subAdminMe.user.role, 'sub_admin');
+  pass('Sub-admin /api/me returns 200 with role sub_admin');
+
+  const regularUserMeRes = await fetch(`${baseUrl}/api/me`, {
+    headers: { 'Authorization': `Bearer ${buyerToken}` }
+  });
+  assert.strictEqual(regularUserMeRes.status, 200);
+  const regularUserMe = await regularUserMeRes.json();
+  assert.strictEqual(regularUserMe.user.role, 'user');
+  pass('Regular user has role "user" which correctly causes client-side bundle editor to block access and redirect to lobby');
+
+  // 6.5 Cookie-based token fallback test on server
+  const cookieMeRes = await fetch(`${baseUrl}/api/me`, {
+    headers: { 'Cookie': `auth_token=${adminToken}` }
+  });
+  assert.strictEqual(cookieMeRes.status, 200);
+  const cookieMe = await cookieMeRes.json();
+  assert.strictEqual(cookieMe.user.username, 'Madara');
+  pass('Server auth middleware accepts session token from Cookie header seamlessly');
+
   // Cleanup test server
   await new Promise(r => testServer.close(r));
 

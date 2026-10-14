@@ -8,7 +8,10 @@ class ApiService {
   }
 
   getToken() {
-    return sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
+    return sessionStorage.getItem('auth_token') ||
+           localStorage.getItem('auth_token') ||
+           sessionStorage.getItem('token') ||
+           localStorage.getItem('token');
   }
 
   setToken(token, sessionOnly = false) {
@@ -20,6 +23,8 @@ class ApiService {
     } else {
       sessionStorage.removeItem('auth_token');
       localStorage.removeItem('auth_token');
+      sessionStorage.removeItem('token');
+      localStorage.removeItem('token');
     }
   }
 

@@ -7,15 +7,29 @@ import ui from './ui.js';
 import i18n from './language.js';
 import { showToast, sfx } from './utils.js';
 
+function getSafeRedirect() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const redirect = urlParams.get('redirect');
+  if (redirect) {
+    if (redirect.startsWith('//') || redirect.includes('://')) {
+      return null;
+    }
+    if (redirect.startsWith('/')) {
+      return redirect;
+    }
+    return '/' + redirect.replace(/^\.\//, '');
+  }
+  return null;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   ui.setupGlobalNav();
 
   // If already logged in, redirect to lobby if on auth pages
   const token = api.getToken();
   if (token && (window.location.pathname.endsWith('login.html') || window.location.pathname.endsWith('register.html'))) {
-    const urlParams = new URLSearchParams(window.location.search);
-    const redirect = urlParams.get('redirect');
-    if (redirect && redirect.startsWith('/')) {
+    const redirect = getSafeRedirect();
+    if (redirect) {
       window.location.href = redirect;
     } else {
       window.location.href = '/lobby.html';
@@ -241,9 +255,8 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(i18n.t('registerSuccess'), 'success');
 
         setTimeout(() => {
-          const urlParams = new URLSearchParams(window.location.search);
-          const redirect = urlParams.get('redirect');
-          if (redirect && redirect.startsWith('/')) {
+          const redirect = getSafeRedirect();
+          if (redirect) {
             window.location.href = redirect;
           } else {
             window.location.href = '/lobby.html';
@@ -283,9 +296,8 @@ document.addEventListener('DOMContentLoaded', () => {
         sfx.click();
         showToast(i18n.t('loginSuccess'), 'success');
         setTimeout(() => {
-          const urlParams = new URLSearchParams(window.location.search);
-          const redirect = urlParams.get('redirect');
-          if (redirect && redirect.startsWith('/')) {
+          const redirect = getSafeRedirect();
+          if (redirect) {
             window.location.href = redirect;
           } else if (res?.user?.role === 'super_admin' || res?.user?.role === 'sub_admin') {
             window.location.href = '/admin.html';
@@ -310,9 +322,8 @@ document.addEventListener('DOMContentLoaded', () => {
         sfx.click();
         showToast(i18n.t('loginSuccess'), 'success');
         setTimeout(() => {
-          const urlParams = new URLSearchParams(window.location.search);
-          const redirect = urlParams.get('redirect');
-          if (redirect && redirect.startsWith('/')) {
+          const redirect = getSafeRedirect();
+          if (redirect) {
             window.location.href = redirect;
           } else {
             window.location.href = '/lobby.html';

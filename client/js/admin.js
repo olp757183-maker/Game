@@ -122,6 +122,7 @@ function setupTabNavigation() {
   navItems.forEach(item => {
     item.addEventListener('click', () => {
       const targetId = item.getAttribute('data-target');
+      if (!targetId) return;
       navItems.forEach(n => n.classList.remove('active'));
       sections.forEach(s => s.classList.remove('active'));
 

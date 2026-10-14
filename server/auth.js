@@ -65,8 +65,13 @@ export const auth = {
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7);
-    } else if (req.query.token) {
+    } else if (req.query && req.query.token) {
       token = req.query.token;
+    } else if (req.headers && req.headers.cookie) {
+      const match = req.headers.cookie.match(/(?:^|;\s*)(?:auth_token|token)=([^;]+)/);
+      if (match) {
+        token = decodeURIComponent(match[1]);
+      }
     }
 
     if (!token) {
@@ -134,8 +139,13 @@ export const auth = {
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7);
-    } else if (req.query.token) {
+    } else if (req.query && req.query.token) {
       token = req.query.token;
+    } else if (req.headers && req.headers.cookie) {
+      const match = req.headers.cookie.match(/(?:^|;\s*)(?:auth_token|token)=([^;]+)/);
+      if (match) {
+        token = decodeURIComponent(match[1]);
+      }
     }
 
     if (token) {

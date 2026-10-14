@@ -6,6 +6,8 @@
 import { GAME_ASSETS_SPEC } from '../shared/game-assets-spec.js';
 import skinAssets from './skin-assets.js';
 import { escapeHtml } from './utils.js';
+import api from './api.js';
+import ui from './ui.js';
 
 // State
 let currentUser = null;
@@ -78,26 +80,20 @@ function showToast(message, type = 'info') {
 
 // Authentication Check
 async function checkAuth() {
+  const token = api.getToken();
+  if (!token) {
+    window.location.href = '/login.html?redirect=/bundle-editor.html';
+    return false;
+  }
+
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      window.location.href = './login.html?redirect=bundle-editor.html';
-      return false;
-    }
-    const res = await fetch('/api/me', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!res.ok) {
-      window.location.href = './login.html?redirect=bundle-editor.html';
-      return false;
-    }
-    const data = await res.json();
-    currentUser = data.user;
+    const res = await api.request('/me');
+    currentUser = res.user;
 
     const isAdmin = currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'sub_admin');
     if (!isAdmin) {
       alert('عذراً، محرر حزم السكنات متاح للمديرين فقط.');
-      window.location.href = './index.html';
+      window.location.href = '/lobby.html';
       return false;
     }
 
@@ -109,21 +105,25 @@ async function checkAuth() {
         <button id="logout-btn" class="btn btn-outline btn-xs">خروج</button>
       `;
       document.getElementById('logout-btn')?.addEventListener('click', () => {
-        localStorage.removeItem('token');
-        window.location.href = './login.html';
+        api.logout();
       });
     }
 
     return true;
   } catch (err) {
     console.error('Auth error:', err);
+    if (err.status === 401 || err.status === 403) {
+      api.logout();
+    } else {
+      showToast(err.message || 'حدث خطأ في الاتصال بالخادم', 'error');
+    }
     return false;
   }
 }
 
 // Helper: Get Auth Headers
 function getHeaders(isJson = true) {
-  const token = localStorage.getItem('token');
+  const token = api.getToken();
   const headers = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
   if (isJson) headers['Content-Type'] = 'application/json';
@@ -721,6 +721,9 @@ filterMissingBtn.addEventListener('click', () => {
 
 // Initial Load
 (async () => {
+  if (ui && typeof ui.setupGlobalNav === 'function') {
+    ui.setupGlobalNav();
+  }
   const authed = await checkAuth();
   if (!authed) return;
 

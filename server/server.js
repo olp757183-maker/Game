@@ -64,7 +64,7 @@ app.get('/health', (req, res) => {
 // Serve uploads directory, client static files & shared directory
 app.use('/uploads', express.static(UPLOADS_DIR));
 app.use('/shared', express.static(SHARED_DIR));
-app.use(express.static(CLIENT_DIR));
+app.use(express.static(CLIENT_DIR, { extensions: ['html'] }));
 
 // ==========================================
 // REST API ROUTES
